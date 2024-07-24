@@ -17,11 +17,12 @@ dataframes = {name: preprocess(path) for name, path in df_paths.items()}
 
 
 # create session states
-if 'profile' not in st.session_state:
-    st.session_state.profile = None
-
+if 'dataset' not in st.session_state:
+    st.session_state.dataset = None
+if 'report' not in st.session_state:
+    st.session_state.report = None
 if 'filters' not in st.session_state:
-    st.session_state.filters = None
+    st.session_state.filters = []
 
 
 # UI and logic for choosing a dataset
@@ -66,21 +67,14 @@ selected_country_codes = [country_codes[country] for country in selected_countri
 
 selected_columns = st.multiselect('select columns:', selected_df.columns.tolist(), selected_df.columns.tolist())
 
-# check to see if filters have been updated
+
+# check to see if filters have been updated and update profile state if filters change
 filters = [selected_countries, selected_columns]
-def check_filter_update():
-    updated = False
-    for index, fil in enumerate(filters):
-        if fil != st.session_state.filters[index]:
-            updated = True
-
-    return updated
-
-# update profile state if filters change
-if selected_countries != st.session_state.filters['countries'] or selected_columns != st.session_state.filters['columns']:
-    st.session_state.filters['countries'] = selected_countries
-    st.session_state.filters['columns'] = selected_columns
-    st.session_state.profile = None
+if filters != st.session_state.filters or selected_df_name != st.session_state.dataset:
+    st.session_state.filters = filters
+    st.session_state.dataset = selected_df_name
+    st.session_state.report = None
+    
 
 # summary section
 st.markdown("#### Summary")
@@ -120,13 +114,13 @@ st.write("Click the button below to generate a more detailed report of the filte
 if st.button('Generate Dataset Profile Report'):
     if selected_df[selected_columns].empty:
         st.write("no data available for the subsetted data.")
-        st.session_state.profile = None
+        st.session_state.report = None
     else:
         profile = ProfileReport(selected_df[selected_columns], title=f"Profile Report for {selected_df_name}", explorative=True)
-        st.session_state.profile = profile
+        st.session_state.report = profile
 
-if st.session_state.profile:
-    st_profile_report(st.session_state.profile)
+if st.session_state.report:
+    st_profile_report(st.session_state.report)
 
 st.write("")
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -138,10 +132,10 @@ st.markdown("To download the report, it must first be converted to a PDF documen
 if st.button('Convert to PDF'):
 
     # check to see if profile has been generated
-    if st.session_state.profile:
+    if st.session_state.report:
 
         # retrieve the profile from the session state
-        profile = st.session_state.profile
+        profile = st.session_state.report
 
         with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
             profile_file_path = tmp_html.name
@@ -153,12 +147,12 @@ if st.button('Convert to PDF'):
         pdfkit.from_file(profile_file_path, pdf_file_path)
 
         with open(pdf_file_path, 'rb') as f:
-            st.download_button('Download PDF', f, file_name='dataset profile.pdf', mime='application/pdf')
+            st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf')
 
         # Clean up temporary files
         os.remove(profile_file_path)
         os.remove(pdf_file_path)
 
     else:
-        st.write("no profile has been generated to convert")
+        st.write("no report has been generated to convert")
 
