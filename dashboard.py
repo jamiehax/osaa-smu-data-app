@@ -7,17 +7,6 @@ import os
 import tempfile
 
 
-# setup app layout
-st.markdown("""
-    <style>
-        .main {
-            padding-left: 2rem;
-            padding-right: 2rem;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-
 # example dataframes
 df_paths = {
     "Education Data": "data/education_test.csv",
@@ -25,6 +14,14 @@ df_paths = {
     "Poverty Data": "data/poverty_test.csv"
 }
 dataframes = {name: preprocess(path) for name, path in df_paths.items()}
+
+
+# create session states
+if 'profile' not in st.session_state:
+    st.session_state.profile = None
+
+if 'filters' not in st.session_state:
+    st.session_state.filters = None
 
 
 # UI and logic for choosing a dataset
@@ -69,6 +66,21 @@ selected_country_codes = [country_codes[country] for country in selected_countri
 
 selected_columns = st.multiselect('select columns:', selected_df.columns.tolist(), selected_df.columns.tolist())
 
+# check to see if filters have been updated
+filters = [selected_countries, selected_columns]
+def check_filter_update():
+    updated = False
+    for index, fil in enumerate(filters):
+        if fil != st.session_state.filters[index]:
+            updated = True
+
+    return updated
+
+# update profile state if filters change
+if selected_countries != st.session_state.filters['countries'] or selected_columns != st.session_state.filters['columns']:
+    st.session_state.filters['countries'] = selected_countries
+    st.session_state.filters['columns'] = selected_columns
+    st.session_state.profile = None
 
 # summary section
 st.markdown("#### Summary")
@@ -101,10 +113,6 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 
-# create session state for profile
-if 'profile' not in st.session_state:
-    st.session_state.profile = None
-
 # create the dataframe profile and display it
 st.subheader("Dataset Profile Report")
 st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it may be downloaded as a PDF document. To do so, follow the steps below the report.")
@@ -117,9 +125,8 @@ if st.button('Generate Dataset Profile Report'):
         profile = ProfileReport(selected_df[selected_columns], title=f"Profile Report for {selected_df_name}", explorative=True)
         st.session_state.profile = profile
 
-with st.expander("show report"):
-    if st.session_state.profile:
-        st_profile_report(st.session_state.profile)
+if st.session_state.profile:
+    st_profile_report(st.session_state.profile)
 
 st.write("")
 st.markdown("<hr>", unsafe_allow_html=True)
