@@ -19,7 +19,7 @@ if 'filters' not in st.session_state:
 
 # title and introduction
 st.title("OSAA SMU's Data Dashboard")
-st.markdown("This Data Dashboard allows for quick access to summary statistics about a dataset. Use the sidebar to the left to select which dataset you want to investigate. Once you have selected a dataset, use the *Dataset Filters* section to filter and subset the Dataset to only focus on the area(s) of interest. In that section is where you will also find a brief summary of the dataset. To generate and or download a more detailed summary, go to the *Dataset Profile Report* section once you have selected and filtered the dataset.")
+st.markdown("The Data Dashboard allows for quick access to summary statistics about a dataset. First select a dataset to view by searching the available datasets by name. Once you have selected a dataset, you can filter and subset the dataset to only focus on your area(s) of interest. Once you have selected and filtered a dataset, you can view the summary statistics on that data. To generate and download a more detailed summary, go to the *Dataset Profile Report* section once you have selected and filtered the dataset.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
@@ -39,7 +39,6 @@ st.write("")
 
 # filter the dataset
 st.markdown("#### Filter Dataset")
-st.write("Use the filters in this section to select a subset of the Dataset you are interested in looking at. For example, you can choose to look at only certain countries or only certain columns of the data. Below the filters is a table displaying the summary statistics of the selected dataset.")
 
 country_codes = {
     'Republic of Burundi': 'BDI',	
@@ -105,7 +104,7 @@ st.write("")
 
 # create the dataframe profile and display it
 st.subheader("Dataset Profile Report")
-st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it may be downloaded as a PDF document. To do so, follow the steps below the report.")
+st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF document in the section below.")
 
 if st.button('Generate Dataset Profile Report'):
     if st.session_state.df[selected_columns].empty:
@@ -123,7 +122,7 @@ st.write("")
 
 # download the generated report as a PDF document
 st.subheader("Download the Generated Report as a PDF")
-st.markdown("To download the report, it must first be converted to a PDF document. Click the *Convert to PDF* button below to convert the report to a PDF document. Once it has been converted, another button will appear to download it.")
+st.markdown("To download the report, it must first be converted to a PDF document. Click the *Convert to PDF* button below to convert the report to a PDF document. Once it has been converted, a button will appear below to download it.")
 if st.button('Convert to PDF'):
 
     # check to see if profile has been generated
@@ -144,7 +143,7 @@ if st.button('Convert to PDF'):
         with open(pdf_file_path, 'rb') as f:
             st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf')
 
-        # Clean up temporary files
+        # clean up temporary files
         os.remove(profile_file_path)
         os.remove(pdf_file_path)
 
