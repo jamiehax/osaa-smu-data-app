@@ -19,8 +19,14 @@ st.markdown("The SMU's Data Sheet allows for the automation of excel sheet proce
 # find and choose a dataset
 st.markdown("#### Select a Dataset")
 dataset_names = get_dataset_names()
-selected_dataset_name = st.selectbox("find a dataset", dataset_names, placeholder="search datasets...", label_visibility="collapsed")
-st.write(f"Selected Dataset: {selected_dataset_name}")
-selected_df = get_df(selected_dataset_name)
+selected_dataset_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
-new_dfs, code = spreadsheet(selected_df)
+if selected_dataset_name is not None:
+    st.success(f"Selected Dataset: {selected_dataset_name}")
+    selected_df = get_df(selected_dataset_name)
+else:
+    selected_df = None
+
+
+if selected_df is not None:
+    new_dfs, code = spreadsheet(selected_df)

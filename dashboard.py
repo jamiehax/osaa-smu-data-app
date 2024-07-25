@@ -28,11 +28,12 @@ st.write("")
 # find and choose a dataset
 st.markdown("#### Select a Dataset")
 dataset_names = get_dataset_names()
-selected_dataset_name = st.selectbox("find a dataset", dataset_names, placeholder="search datasets...", label_visibility="collapsed")
-st.session_state.df = get_df(selected_dataset_name)
-st.session_state.df_name = selected_dataset_name
-st.write(f"Selected Dataset: {st.session_state.df_name}")
- 
+selected_dataset_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
+
+if selected_dataset_name is not None:
+    st.session_state.df = get_df(selected_dataset_name)
+    st.session_state.df_name = selected_dataset_name
+    st.success(f"Selected Dataset: {st.session_state.df_name}") 
 
 st.write("")
 
