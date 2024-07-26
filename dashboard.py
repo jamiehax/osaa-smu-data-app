@@ -59,13 +59,15 @@ country_codes = {
     'Republic of Zambia': 'ZMB',
     'Republic of Zimbabwe': 'ZWE'
 }
-selected_countries = st.multiselect('select countries:', list(country_codes.keys()))
-selected_country_codes = [country_codes[country] for country in selected_countries]
 
 if df is not None:
+    selected_countries = st.multiselect('select countries:', list(country_codes.keys()))
+    selected_country_codes = [country_codes[country] for country in selected_countries]
     selected_columns = st.multiselect('select columns:', df.columns.tolist(), df.columns.tolist())
 else:
     selected_columns = None
+    selected_countries = None
+    selected_country_codes = None
    
 # summary section
 st.markdown("#### Summary")
