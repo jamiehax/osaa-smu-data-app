@@ -28,6 +28,7 @@ dacite==1.8.1
 debugpy==1.8.2
 decorator==5.1.1
 defusedxml==0.7.1
+duckdb==1.0.0
 entrypoints==0.4
 et-xmlfile==1.1.0
 exceptiongroup==1.2.2
