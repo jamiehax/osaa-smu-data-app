@@ -65,6 +65,7 @@ if df is not None:
     selected_country_codes = [country_codes[country] for country in selected_countries]
     selected_columns = st.multiselect('select columns:', df.columns.tolist(), df.columns.tolist())
 else:
+    st.write("no dataset selected")
     selected_columns = None
     selected_countries = None
     selected_country_codes = None
