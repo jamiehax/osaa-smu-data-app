@@ -3,14 +3,6 @@ from helper_functions import get_dataset_names, get_df
 from mitosheet.streamlit.v1 import spreadsheet
 
 
-# example csv files
-csv_paths = {
-    "Education Data": "data/education_test.csv",
-    "Income Data": "data/income_test.csv",
-    "Poverty Data": "data/poverty_test.csv"
-}
-
-
 # title and introduction
 st.title("OSAA SMU's Data Sheet")
 
@@ -18,15 +10,16 @@ st.markdown("The SMU's Data Sheet allows for the automation of excel sheet proce
 
 # find and choose a dataset
 st.markdown("#### Select a Dataset")
-dataset_names = get_dataset_names()
-selected_dataset_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
+dataset_names = get_dataset_names(st.session_state.db_path)
+df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
-if selected_dataset_name is not None:
-    st.success(f"Selected Dataset: {selected_dataset_name}")
-    selected_df = get_df(selected_dataset_name)
+if df_name is not None:
+    df = get_df(st.session_state.db_path, df_name)
 else:
-    selected_df = None
+    df = None
+
+st.success(f"Selected Dataset: {df_name}") 
 
 
-if selected_df is not None:
-    new_dfs, code = spreadsheet(selected_df)
+if df is not None:
+    new_dfs, code = spreadsheet(df)

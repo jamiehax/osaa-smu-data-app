@@ -1,5 +1,5 @@
 import streamlit as st
-from helper_functions import preprocess, get_dataset_names, get_df
+from helper_functions import get_dataset_names, get_df
 from ydata_profiling import ProfileReport
 from streamlit_pandas_profiling import st_profile_report
 import pdfkit
@@ -7,14 +7,11 @@ import os
 import tempfile
 
 
-
 # create session states
-if 'df_name' not in st.session_state:
-    st.session_state.df_name = None
-if 'df' not in st.session_state:
-    st.session_state.df = None
 if 'filters' not in st.session_state:
     st.session_state.filters = []
+if 'report' not in st.session_state:
+    st.session_state.report = None
 
 
 # title and introduction
@@ -27,14 +24,16 @@ st.write("")
 
 # find and choose a dataset
 st.markdown("#### Select a Dataset")
-dataset_names = get_dataset_names()
-selected_dataset_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
+dataset_names = get_dataset_names(st.session_state.db_path)
+df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
-if selected_dataset_name is not None:
-    st.session_state.df = get_df(selected_dataset_name)
-    st.session_state.df_name = selected_dataset_name
-    st.success(f"Selected Dataset: {st.session_state.df_name}") 
+if df_name is not None:
+    df = get_df(st.session_state.db_path, df_name)
+else:
+    df = None
+    st.session_state.report = None
 
+st.success(f"Selected Dataset: {df_name}") 
 st.write("")
 
 # filter the dataset
@@ -63,17 +62,16 @@ country_codes = {
 selected_countries = st.multiselect('select countries:', list(country_codes.keys()))
 selected_country_codes = [country_codes[country] for country in selected_countries]
 
-if st.session_state.df is not None:
-    selected_columns = st.multiselect('select columns:', st.session_state.df.columns.tolist(), st.session_state.df.columns.tolist())
+if df is not None:
+    selected_columns = st.multiselect('select columns:', df.columns.tolist(), df.columns.tolist())
 else:
     selected_columns = None
    
-
 # summary section
 st.markdown("#### Summary")
-if st.session_state.df is not None:
-    if not st.session_state.df[selected_columns].empty:
-        summary = st.session_state.df[selected_columns].describe()
+if df is not None:
+    if not df[selected_columns].empty:
+        summary = df[selected_columns].describe()
 
         columns = summary.columns
         tabs = st.tabs(columns.to_list())
@@ -107,14 +105,17 @@ st.subheader("Dataset Profile Report")
 st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF document in the section below.")
 
 if st.button('Generate Dataset Profile Report'):
-    if st.session_state.df[selected_columns].empty:
-        st.write("no data available for the subsetted data.")
-    else:
-        profile = ProfileReport(st.session_state.df[selected_columns], title=f"Profile Report for {selected_dataset_name}", explorative=True)
-        st.session_state.report = profile
+    if df is not None:
+        if df[selected_columns].empty:
+            st.write("no data available for the subsetted data.")
+        else:
+            profile = ProfileReport(df[selected_columns], title=f"Profile Report for {df_name}", explorative=True)
 
         with st.expander("show report"):
-            st_profile_report(st.session_state.report)
+            st_profile_report(profile)
+
+    else:
+        st.write("please select a dataset.")
 
 st.write("")
 st.markdown("<hr>", unsafe_allow_html=True)
