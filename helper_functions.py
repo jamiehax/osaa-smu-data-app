@@ -1,36 +1,82 @@
 import pandas as pd
+import duckdb
+import os
 
-# example datasets
-df_paths = {
-    "Education Data": "data/education_test.csv",
-    "Income Data": "data/income_test.csv",
-    "Poverty Data": "data/poverty_test.csv"
-}
 
-def preprocess(df_path):
+def preprocess(df):
 
-    # create data fram
-    df = pd.read_csv(df_path)
-
-    # process data as needed here
+    # process dataframe as needed here
 
     return df
 
 
-# placeholder function to simulate dataset query
-def search_datasets(query):
+# create a test DuckDB and return the path
+def setup_db():
+    
+    DB_PATH = 'test_database.duckdb'
+    CSV_DIR = 'data'
 
-    dataframes = {name: preprocess(path) for name, path in df_paths.items()}
+    # check to see if database already exists
+    if not os.path.exists(DB_PATH):
 
-    matching_datasets = [ds for ds in dataframes if query.lower() in ds.lower()]
-    return matching_datasets
+        # connect to database, and make it if it doesn't already exist
+        conn = duckdb.connect(database=DB_PATH, read_only=False)
+
+        # create a metadata table to store dataset names and primary keys
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS metadata (
+                id INTEGER PRIMARY KEY,
+                name TEXT
+            )
+        """)
+
+        # import all the CSV files into the DuckDB
+        csv_files = [f for f in os.listdir(CSV_DIR) if f.endswith('.csv')]
+        for idx, csv_file in enumerate(csv_files):
+
+            # turn CSV's into DataFrames
+            df = pd.read_csv(os.path.join(CSV_DIR, csv_file))
+
+            # import dataframe into DuckDB with the filename as the table name
+            table_name = os.path.splitext(csv_file)[0]
+
+            # check to see if it exists already
+            conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+            conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
+            
+            # Add an entry to the metadata table
+            conn.execute("INSERT INTO metadata (id, name) VALUES (?, ?)", (idx, table_name))
+
+
+        # Close the connection
+        conn.close()
+
+    return DB_PATH
 
 
 # simulate getting dataset names from database
-def get_dataset_names():
-    return [name for name in df_paths.keys()]
+def get_dataset_names(db_path):
+
+    # connect to database
+    conn = duckdb.connect(database=db_path, read_only=True)
+
+    # query - this may change depending on the schema of the database
+    query = "SELECT name FROM metadata"
+    result = conn.execute(query).fetchall()
+    conn.close()
+
+    return [row[0] for row in result]
 
 
 # simulate getting a dataset by name (or key) from a database
-def get_df(name):
-    return preprocess(df_paths[name])
+def get_df(db_path, name):
+
+    # connect to database
+    conn = duckdb.connect(database=db_path, read_only=True)
+
+    # query and convert to dataframe - this may change depending on the schema of the database
+    query = f"SELECT * FROM {name}"
+    df = conn.execute(query).df()
+    conn.close()
+
+    return preprocess(df)
