@@ -112,16 +112,17 @@ st.write("")
 st.subheader("Natural Language Queries")
 st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as python and SQL code.")
 
+query = st.text_input(
+    "enter your query",
+    label_visibility='collapsed',
+    placeholder=st.session_state.placeholder
+)
+
 if df is not None:
     if df[selected_columns].empty:
         st.write("no data available for the subsetted data.")
     else:
         agent = Agent(df[selected_columns])
-        query = st.text_input(
-            "enter your query",
-            label_visibility='collapsed',
-            placeholder=st.session_state.placeholder
-        )
         response = agent.chat(query)
         st.write(response)
 else:
