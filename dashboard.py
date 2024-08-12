@@ -5,6 +5,12 @@ from streamlit_pandas_profiling import st_profile_report
 import pdfkit
 import os
 import tempfile
+import pandasai
+
+
+# set pandas ai API key
+os.environ["PANDASAI_API_KEY"] = ""
+
 
 
 # create session states
