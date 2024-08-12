@@ -124,6 +124,8 @@ if df is not None:
         )
         response = agent.chat(query)
         st.write(response)
+else:
+    st.write("no dataset selected")
 
 
 # create the dataframe profile and display it
