@@ -126,7 +126,6 @@ if df is not None:
         st.write(response)
 
 
-
 # create the dataframe profile and display it
 st.subheader("Dataset Profile Report")
 st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF document in the section below.")

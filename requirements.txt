@@ -96,7 +96,7 @@ openai==1.40.3
 openpyxl==3.1.5
 overrides==7.7.0
 packaging==24.1
-pandas==1.5.3
+pandas>=1.5.3
 pandas-profiling==3.6.6
 pandasai==2.2.14
 pandocfilters==1.5.1
