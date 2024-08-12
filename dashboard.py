@@ -5,12 +5,11 @@ from streamlit_pandas_profiling import st_profile_report
 import pdfkit
 import os
 import tempfile
-import pandasai
+from pandasai import Agent
 
 
 # set pandas ai API key
 os.environ["PANDASAI_API_KEY"] = ""
-
 
 
 # create session states
@@ -107,6 +106,25 @@ else:
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
+
+
+# natural language dataset exploration
+st.subheader("Natural Language Queries")
+st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as python and SQL code.")
+
+if df is not None:
+    if df[selected_columns].empty:
+        st.write("no data available for the subsetted data.")
+    else:
+        agent = Agent(df[selected_columns])
+        query = st.text_input(
+            "enter your query",
+            label_visibility='collapsed',
+            placeholder=st.session_state.placeholder
+        )
+        response = agent.chat(query)
+        st.write(response)
+
 
 
 # create the dataframe profile and display it
