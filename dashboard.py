@@ -115,7 +115,7 @@ st.write("Use this chat bot to understand the data with antural language queries
 query = st.text_input(
     "enter your query",
     label_visibility='collapsed',
-    placeholder=st.session_state.placeholder
+    placeholder="enter your query"
 )
 
 if df is not None:
