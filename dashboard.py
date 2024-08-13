@@ -112,7 +112,7 @@ st.write("")
 st.subheader("Natural Language Queries")
 st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as python and SQL code.")
 
-st.subheader("### Ask about the data:")
+st.markdown("#### Ask about the data:")
 query = st.text_input(
     "enter your query",
     label_visibility='collapsed',
@@ -126,7 +126,7 @@ if df is not None:
         # agent = Agent(df[selected_columns])
         # response = agent.chat(query)
         response = "will add this once we have an API key"
-        st.markdown("### Response:")
+        st.markdown("#### Response:")
         st.write(response)
 else:
     st.write("no dataset selected")
