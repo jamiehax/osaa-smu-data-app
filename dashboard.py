@@ -122,7 +122,7 @@ if df is not None:
     if df[selected_columns].empty:
         st.write("no data available for the subsetted data.")
     else:
-        agent = Agent(df[selected_columns])
+        # agent = Agent(df[selected_columns])
         # response = agent.chat(query)
         response = "will add this once we have an API key"
         st.write(response)
