@@ -39,7 +39,7 @@ mdurl==0.1.2
 multimethod==1.12
 narwhals==1.4.1
 networkx==3.3
-numba==0.60.0
+numba==0.55.2
 numpy==1.26.4
 openai==1.40.6
 packaging==24.1
