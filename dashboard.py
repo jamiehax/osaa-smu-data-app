@@ -9,7 +9,7 @@ from pandasai import Agent
 
 
 # set pandas ai API key
-os.environ["PANDASAI_API_KEY"] = ""
+os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
 
 
 # create session states
@@ -123,9 +123,8 @@ if df is not None:
     if df[selected_columns].empty:
         st.write("no data available for the subsetted data.")
     else:
-        # agent = Agent(df[selected_columns])
-        # response = agent.chat(query)
-        response = "will add this once we have an API key"
+        agent = Agent(df[selected_columns])
+        response = agent.chat(query)
         st.markdown("##### Response:")
         st.write(response)
 else:
