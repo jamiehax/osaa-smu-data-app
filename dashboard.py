@@ -5,7 +5,6 @@ from streamlit_pandas_profiling import st_profile_report
 import pdfkit
 import os
 import tempfile
-from pandasai import Agent
 
 
 # set pandas ai API key
@@ -118,17 +117,18 @@ query = st.text_input(
     label_visibility='collapsed',
     placeholder="enter your query"
 )
+st.write("natural language queries not working right now due to a package conflict")
 
-if df is not None:
-    if df[selected_columns].empty:
-        st.write("no data available for the subsetted data.")
-    else:
-        agent = Agent(df[selected_columns])
-        response = agent.chat(query)
-        st.markdown("##### Response:")
-        st.write(response)
-else:
-    st.write("no dataset selected")
+# if df is not None:
+#     if df[selected_columns].empty:
+#         st.write("no data available for the subsetted data.")
+#     else:
+#         agent = Agent(df[selected_columns])
+#         response = agent.chat(query)
+#         st.markdown("##### Response:")
+#         st.write(response)
+# else:
+#     st.write("no dataset selected")
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
