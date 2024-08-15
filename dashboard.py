@@ -5,6 +5,7 @@ from streamlit_pandas_profiling import st_profile_report
 import pdfkit
 import os
 import tempfile
+import pandas as pd
 
 
 # set pandas ai API key
@@ -27,7 +28,11 @@ st.write("")
 
 
 # find and choose a dataset
-st.markdown("#### Select a Dataset")
+st.subheader("Select a Dataset")
+st.write("Either search through existing datasets or upload your own dataset as a CSV or Excel file.")
+
+
+st.markdown("##### Search Datasets")
 dataset_names = get_dataset_names(st.session_state.db_path)
 df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
@@ -36,6 +41,18 @@ if df_name is not None:
 else:
     df = None
     st.session_state.report = None
+
+
+st.markdown("##### Upload a Dataset (CSV or excel)")
+uploaded_df = st.file_uploader("Choose a file", type=["csv", "xlsx"], label_visibility="collapsed")
+
+if uploaded_df is not None:
+    df_name = uploaded_df.name
+    if uploaded_df.name.endswith('.csv'):
+        df = pd.read_csv(uploaded_df)
+    elif uploaded_df.name.endswith('.xlsx'):
+        df = pd.read_excel(uploaded_df)
+
 
 st.success(f"Selected Dataset: {df_name}") 
 st.write("")

@@ -1,13 +1,13 @@
 import streamlit as st
 from helper_functions import get_dataset_names, get_df
-from mitosheet.streamlit.v1 import spreadsheet
 import pandas as pd
+from pygwalker.api.streamlit import StreamlitRenderer
 
 
 # title and introduction
-st.title("OSAA SMU's Data Sheet")
+st.title("OSAA SMU's Data Visulization Tool")
 
-st.markdown("The SMU's Data Sheet allows for the automation of excel sheet processes and analysis with *Mitosheet*.")
+st.markdown("The SMU's Data Visulization tool allows for the automatic creation of data visulizations with *PyGWalker*.")
 
 # find and choose a dataset
 st.subheader("Select a Dataset")
@@ -41,8 +41,13 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 
-st.subheader("Mitosheet")
+st.subheader("Data Visualization Tool")
 if df is not None:
-    new_dfs, code = spreadsheet(df)
+    @st.cache_resource
+    def get_pyg_renderer() -> "StreamlitRenderer":
+        return StreamlitRenderer(df, spec="./gw_config.json", spec_io_mode="rw")
+
+    renderer = get_pyg_renderer()
+    renderer.explorer()
 else:
     st.write("no dataset selected")

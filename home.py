@@ -19,3 +19,10 @@ with col1:
     st.markdown("The SMU's Data Sheet allows for the automation of excel sheet processes and analysis with *Mitosheet*.")
 with col2:
     st.page_link("datasheet.py", label="Data Sheet", icon=":material/table_chart:")
+
+st.subheader("Data Visualization Tool")
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("The SMU's Data Visualization tool uses *PyGWalker* to automatically create data visualizations like graphs and charts.")
+with col2:
+    st.page_link("visualizations.py", label="Data Visulization Tool", icon=":material/insert_chart:")

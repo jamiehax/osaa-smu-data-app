@@ -10,7 +10,8 @@ if 'db_path' not in st.session_state:
 home_page = st.Page("home.py", title="Home", icon=":material/home:")
 dashboard_page = st.Page("dashboard.py", title="Data Dashboard", icon=":material/analytics:")
 mitosheet_page = st.Page("datasheet.py", title="Data Sheet", icon=":material/table_chart:")
+visualizations_page = st.Page("visualizations.py", title="Data Visualization Tool", icon=":material/insert_chart:")
 
-pg = st.navigation([home_page, dashboard_page, mitosheet_page])
+pg = st.navigation([home_page, dashboard_page, mitosheet_page, visualizations_page])
 st.set_page_config(page_title="SMU Data App", page_icon=":material/home:", layout="wide")
 pg.run()
