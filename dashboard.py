@@ -8,7 +8,7 @@ import tempfile
 
 
 # set pandas ai API key
-os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
+# os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
 
 
 # create session states
@@ -145,6 +145,7 @@ if st.button('Generate Dataset Profile Report'):
             st.write("no data available for the subsetted data.")
         else:
             profile = ProfileReport(df[selected_columns], title=f"Profile Report for {df_name}", explorative=True)
+            st.session_state.report = profile
 
         with st.expander("show report"):
             st_profile_report(profile)
