@@ -3,6 +3,6 @@ duckdb
 mitosheet
 PyGWalker
 pdfkit
+pandasai>=2
 ydata-profiling
-pandasai
 streamlit-pandas-profiling
