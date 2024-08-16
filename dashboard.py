@@ -138,8 +138,8 @@ if st.button('Get Response'):
         if df[selected_columns].empty:
             st.write("no data available for the subsetted data.")
         else:
-            bamboo = BambooLLM(api_key=st.secrets["api_keys"]["bamboo"])
-            open_ai = OpenAI(api_token=st.secrets["api_keys"]["open_ai"])
+            bamboo = BambooLLM(api_key=st.secrets["bamboo"])
+            open_ai = OpenAI(api_token=st.secrets["open_ai"])
             smart_df = SmartDataframe(df[selected_columns], config={"llm": open_ai})
             response = smart_df.chat(query)
             st.markdown("##### Response:")
