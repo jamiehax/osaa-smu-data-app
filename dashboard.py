@@ -134,17 +134,17 @@ query = st.text_input(
     label_visibility='collapsed',
     placeholder="enter your query"
 )
-
-if df is not None:
-    if df[selected_columns].empty:
-        st.write("no data available for the subsetted data.")
+if st.button('Get Response:'):
+    if df is not None:
+        if df[selected_columns].empty:
+            st.write("no data available for the subsetted data.")
+        else:
+            smart_df = SmartDataframe(df[selected_columns])
+            response = smart_df.chat(query)
+            st.markdown("##### Response:")
+            st.write(response)
     else:
-        smart_df = SmartDataframe(df[selected_columns])
-        response = smart_df.chat(query)
-        st.markdown("##### Response:")
-        st.write(response)
-else:
-    st.write("no dataset selected")
+        st.write("no dataset selected")
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
