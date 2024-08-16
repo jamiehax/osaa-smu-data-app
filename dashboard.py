@@ -9,8 +9,7 @@ import pandas as pd
 from pandasai import Agent
 
 # set pandas ai API key
-# os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
-os.environ["PANDASAI_API_KEY"] = "$2a$10$DvGKxAS9d2GiiSYWqmTPgOmAZwgDvUlMvtILm9Z2brZQblSbejArK"
+os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
 
 # create session states
 if 'filters' not in st.session_state:
