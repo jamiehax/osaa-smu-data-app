@@ -6,7 +6,7 @@ import pdfkit
 import os
 import tempfile
 import pandas as pd
-from pandasai import Agent
+from pandasai import SmartDataframe
 
 # set pandas ai API key
 os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
@@ -139,8 +139,8 @@ if df is not None:
     if df[selected_columns].empty:
         st.write("no data available for the subsetted data.")
     else:
-        agent = Agent(df[selected_columns])
-        response = agent.chat(query)
+        smart_df = SmartDataframe(df[selected_columns])
+        response = smart_df.chat(query)
         st.markdown("##### Response:")
         st.write(response)
 else:
