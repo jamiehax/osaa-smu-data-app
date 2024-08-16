@@ -1,7 +1,8 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from helper_functions import get_dataset_names, get_df
 import pandas as pd
-from pygwalker.api.streamlit import StreamlitRenderer
+from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
 
 
 # title and introduction
@@ -43,11 +44,12 @@ st.write("")
 
 st.subheader("Data Visualization Tool")
 if df is not None:
+    init_streamlit_comm()
     @st.cache_resource
-    def get_pyg_renderer() -> "StreamlitRenderer":
-        return StreamlitRenderer(df, spec="./gw_config.json", spec_io_mode="rw")
+    def get_pyg_html(df: pd.DataFrame) -> str:
+        html = get_streamlit_html(df, spec="./gw0.json", use_kernel_calc=True, debug=False)
+        return html
 
-    renderer = get_pyg_renderer()
-    renderer.explorer()
+    components.html(get_pyg_html(df), width=1300, height=1000, scrolling=True)
 else:
     st.write("no dataset selected")

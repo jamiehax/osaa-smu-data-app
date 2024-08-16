@@ -9,7 +9,7 @@ import pandas as pd
 from pandasai import Agent
 
 # set pandas ai API key
-os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
+# os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
 
 # create session states
 if 'filters' not in st.session_state:
@@ -138,7 +138,7 @@ if st.button('Get Response'):
         if df[selected_columns].empty:
             st.write("no data available for the subsetted data.")
         else:
-            smart_df = Agent(df[selected_columns], config={'verbose': True})
+            smart_df = Agent(df[selected_columns])
             response = smart_df.chat(query)
             st.markdown("##### Response:")
             st.write(response)
