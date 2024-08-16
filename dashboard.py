@@ -6,11 +6,11 @@ import pdfkit
 import os
 import tempfile
 import pandas as pd
-from pandasai import SmartDataframe
+from pandasai import Agent
 
 # set pandas ai API key
-os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
-
+# os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
+os.environ["PANDASAI_API_KEY"] = "$2a$10$DvGKxAS9d2GiiSYWqmTPgOmAZwgDvUlMvtILm9Z2brZQblSbejArK"
 
 # create session states
 if 'filters' not in st.session_state:
@@ -134,12 +134,12 @@ query = st.text_input(
     label_visibility='collapsed',
     placeholder="enter your query"
 )
-if st.button('Get Response:'):
+if st.button('Get Response'):
     if df is not None:
         if df[selected_columns].empty:
             st.write("no data available for the subsetted data.")
         else:
-            smart_df = SmartDataframe(df[selected_columns])
+            smart_df = Agent(df[selected_columns], config={'verbose': True})
             response = smart_df.chat(query)
             st.markdown("##### Response:")
             st.write(response)
