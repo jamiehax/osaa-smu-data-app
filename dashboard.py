@@ -6,10 +6,10 @@ import pdfkit
 import os
 import tempfile
 import pandas as pd
-from pandasai import Agent
+from pandasai import SmartDataframe
+from pandasai.llm import BambooLLM
+from pandasai.llm import OpenAI
 
-# set pandas ai API key
-# os.environ["PANDASAI_API_KEY"] = st.secrets["api_keys"]["bamboo_llm"]
 
 # create session states
 if 'filters' not in st.session_state:
@@ -120,7 +120,7 @@ else:
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
+st.write("") 
 
 
 # natural language dataset exploration
@@ -138,7 +138,9 @@ if st.button('Get Response'):
         if df[selected_columns].empty:
             st.write("no data available for the subsetted data.")
         else:
-            smart_df = Agent(df[selected_columns])
+            bamboo_llm = BambooLLM(api_key=st.secrets["bamboo"])
+            openai_llm = OpenAI(api_token=st.secrets["open_ai"])
+            smart_df = SmartDataframe(df[selected_columns], config={"llm": openai_llm})
             response = smart_df.chat(query)
             st.markdown("##### Response:")
             st.write(response)
