@@ -6,10 +6,9 @@ import pdfkit
 import os
 import tempfile
 import pandas as pd
-from pandasai import SmartDataframe
-from pandasai.llm import BambooLLM
-from pandasai.llm import OpenAI
+from pandasai import SmartDataframe, Agent
 from pandasai.llm import AzureOpenAI
+
 
 
 # create session states
@@ -17,6 +16,17 @@ if 'filters' not in st.session_state:
     st.session_state.filters = []
 if 'report' not in st.session_state:
     st.session_state.report = None
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+
+# function to display chat history
+def display_chat_history():
+    for message in st.session_state.chat_history:
+        if message['role'] == 'user':
+            st.write(f"**You:** {message['content']}")
+        else:
+            st.write(f"**AI:** {message['content']}")
 
 
 # title and introduction
@@ -82,8 +92,8 @@ country_codes = {
 }
 
 if df is not None:
-    selected_countries = st.multiselect('select countries:', list(country_codes.keys()))
-    selected_country_codes = [country_codes[country] for country in selected_countries]
+    # selected_countries = st.multiselect('select countries:', list(country_codes.keys()))
+    # selected_country_codes = [country_codes[country] for country in selected_countries]
     selected_columns = st.multiselect('select columns:', df.columns.tolist(), df.columns.tolist())
 else:
     st.write("no dataset selected")
@@ -128,34 +138,47 @@ st.write("")
 st.subheader("Natural Language Queries")
 st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as python and SQL code.")
 
-st.markdown("##### Ask about the data:")
-query = st.text_input(
-    "enter your query",
-    label_visibility='collapsed',
-    placeholder="enter your query"
-)
-if st.button('Get Response'):
-    if df is not None:
-        if df[selected_columns].empty:
-            st.write("no data available for the subsetted data.")
+text_col, send_col = st.columns(2)
+with text_col:
+    query = st.text_input(
+        "enter your query",
+        label_visibility='collapsed',
+        placeholder="enter your query"
+    )
+
+with send_col:
+    if st.button('Send'):
+        if df is not None:
+            if df[selected_columns].empty:
+                st.write("No data available for the subsetted data.")
+            else:
+                try:
+                    azure = AzureOpenAI(
+                        api_token=st.secrets['azure'],
+                        azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
+                        api_version="2024-05-01-preview",
+                        deployment_name="gpt35osaa"
+                    )
+
+                    smart_df = SmartDataframe(df[selected_columns], config={"llm": azure})
+                    response = smart_df.chat(query)
+                    
+                    # agent = Agent(smart_df)
+                    # response = agent.chat(query)
+
+                    st.session_state.chat_history.append({'role': 'user', 'content': query})
+                    st.session_state.chat_history.append({'role': 'ai', 'content': response})
+                                        
+                except Exception as e:
+                    st.error(e)
         else:
-            try:
-                bamboo = BambooLLM(api_key=st.secrets["bamboo"])
-                open_ai = OpenAI(api_token=st.secrets["open_ai"])
-                azure = AzureOpenAI(
-                    api_token=st.secrets["azure"],
-                    azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-                    api_version="2024-05-13",
-                    deployment_name="gpt4o"
-                )
-                smart_df = SmartDataframe(df[selected_columns], config={"llm": azure})
-                response = smart_df.chat(query)
-                st.markdown("##### Response:")
-                st.write(response)
-            except Exception as e:
-                st.error(e)
-    else:
-        st.write("no dataset selected")
+            st.write("No dataset selected")
+
+with st.expander("show conversation"):
+    if st.button('clear conversation'):
+        st.session_state.chat_history = []
+    
+    display_chat_history()
 
 
 st.markdown("<hr>", unsafe_allow_html=True)

@@ -13,7 +13,7 @@ def preprocess(df):
 # create a test DuckDB and return the path
 def setup_db():
     
-    DB_PATH = 'test_database.duckdb'
+    DB_PATH = 'db.duckdb'
     CSV_DIR = 'data'
 
     # check to see if database already exists
