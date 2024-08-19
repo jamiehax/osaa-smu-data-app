@@ -171,14 +171,18 @@ with send_col:
                                         
                 except Exception as e:
                     st.error(e)
-        else:
-            st.write("No dataset selected")
 
 with st.expander("show conversation"):
     if st.button('clear conversation'):
         st.session_state.chat_history = []
     
-    display_chat_history()
+    if df is not None:
+        if df[selected_columns].empty:
+            st.write("No data available for the subsetted data.")
+        else:
+            display_chat_history()
+    else:
+        st.write("No dataset selected")
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
