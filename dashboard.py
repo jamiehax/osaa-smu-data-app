@@ -138,12 +138,16 @@ if st.button('Get Response'):
         if df[selected_columns].empty:
             st.write("no data available for the subsetted data.")
         else:
-            bamboo = BambooLLM(api_key=st.secrets["bamboo"])
-            open_ai = OpenAI(api_token=st.secrets["open_ai"])
-            smart_df = SmartDataframe(df[selected_columns], config={"llm": open_ai})
-            response = smart_df.chat(query)
-            st.markdown("##### Response:")
-            st.write(response)
+            try:
+                bamboo = BambooLLM(api_key=st.secrets["bamboo"])
+                open_ai = OpenAI(api_token=st.secrets["open_ai"])
+                smart_df = SmartDataframe(df[selected_columns], config={"llm": open_ai})
+                response = smart_df.chat(query)
+                st.markdown("##### Response:")
+                st.write(response)
+            except Exception as e:
+                st.markdown("##### Error Generating Response:")
+                st.write(e)
     else:
         st.write("no dataset selected")
 
