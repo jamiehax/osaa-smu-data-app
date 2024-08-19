@@ -142,13 +142,13 @@ if st.button('Get Response'):
             try:
                 bamboo = BambooLLM(api_key=st.secrets["bamboo"])
                 open_ai = OpenAI(api_token=st.secrets["open_ai"])
-                llm = AzureOpenAI(
+                azure = AzureOpenAI(
                     api_token=st.secrets["azure"],
                     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
                     api_version="2023-05-15",
                     deployment_name="my-deployment-name"
                 )
-                smart_df = SmartDataframe(df[selected_columns], config={"llm": open_ai})
+                smart_df = SmartDataframe(df[selected_columns], config={"llm": azure})
                 response = smart_df.chat(query)
                 st.markdown("##### Response:")
                 st.write(response)
