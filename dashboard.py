@@ -146,8 +146,7 @@ if st.button('Get Response'):
                 st.markdown("##### Response:")
                 st.write(response)
             except Exception as e:
-                st.markdown("##### Error Generating Response:")
-                st.write(e)
+                st.error(e)
     else:
         st.write("no dataset selected")
 
