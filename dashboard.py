@@ -146,7 +146,7 @@ if st.button('Get Response'):
                     api_token=st.secrets["azure"],
                     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
                     api_version="2024-05-15",
-                    deployment_name="gpt40"
+                    deployment_name="gpt4o"
                 )
                 smart_df = SmartDataframe(df[selected_columns], config={"llm": azure})
                 response = smart_df.chat(query)
