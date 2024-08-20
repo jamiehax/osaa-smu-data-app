@@ -49,7 +49,7 @@ countries = wb.economy.list()
 selected_countries = st.multiselect("available countries:", countries, label_visibility="collapsed")
 
 st.markdown("##### Select Time Range:")
-selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1960, 2024), step=1)
+selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1960, 2024), step=1, label_visibility="collapsed")
 
 try:
     df = wb.data.DataFrame(selected_indicators, selected_countries, list(range(selected_years[0], selected_years[1]))).reset_index()
@@ -106,7 +106,7 @@ if df is not None:
             st.markdown("### Filtered Data")
             st.write(filtered_df)
 else:
-    st.write("data not available for the selected indicator(s) countries, and year(s).")
+    st.write("data not available for the selected indicator(s), countries, and year(s).")
     filtered_df = None
 
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -132,4 +132,4 @@ if filtered_df is not None:
         st.error("Error generating graph. This is likely due to the data having only one selected country, year, and or indicator. That graph is not supported yet. Please make sure the selected data has more than 1 country, indicator, and year.")
 
 else:
-    st.write("data not available for the selected indicator(s) countries, and year(s).")
+    st.write("data not available for the selected indicator(s), countries, and year(s).")
