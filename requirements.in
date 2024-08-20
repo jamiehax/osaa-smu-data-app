@@ -6,3 +6,5 @@ pdfkit
 ydata-profiling
 streamlit-pandas-profiling
 pandasai>2.0.22
+wbgapi
+plotly

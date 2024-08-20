@@ -365,7 +365,9 @@ pillow==10.4.0
 platformdirs==4.2.2
     # via jupyter-core
 plotly==5.23.0
-    # via mitosheet
+    # via
+    #   -r requirements.in
+    #   mitosheet
 prometheus-client==0.20.0
     # via
     #   jupyter-server
@@ -428,6 +430,7 @@ pywavelets==1.7.0
 pyyaml==6.0.2
     # via
     #   jupyter-events
+    #   wbgapi
     #   ydata-profiling
 pyzmq==26.1.0
     # via
@@ -447,6 +450,7 @@ requests==2.32.3
     #   pandasai
     #   pygwalker
     #   streamlit
+    #   wbgapi
     #   ydata-profiling
 rfc3339-validator==0.1.4
     # via
@@ -508,6 +512,8 @@ streamlit==1.37.1
     #   streamlit-pandas-profiling
 streamlit-pandas-profiling==0.1.3
     # via -r requirements.in
+tabulate==0.9.0
+    # via wbgapi
 tenacity==8.5.0
     # via
     #   plotly
@@ -578,6 +584,8 @@ visions[type-image-path]==0.7.6
     # via ydata-profiling
 wasmtime==12.0.0
     # via gw-dsl-parser
+wbgapi==1.0.12
+    # via -r requirements.in
 wcwidth==0.2.13
     # via prompt-toolkit
 webcolors==24.8.0

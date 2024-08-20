@@ -13,6 +13,13 @@ with col1:
 with col2:
     st.page_link("dashboard.py", label="Dashboard", icon=":material/analytics:")
 
+st.subheader("WB Data Dashboard")
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("The WB Dashboard allows for exploratory data analysis of the World Bank's Data. You can search available indicators by keyword, and select data by indicator, country, and time range. It also creates automatic time series visualizations of the selected data.")
+with col2:
+    st.page_link("wb_dashboard.py", label="WB Dashboard", icon=":material/bar_chart:")
+
 st.subheader("Data Sheet")
 col1, col2 = st.columns(2)
 with col1:
