@@ -12,8 +12,6 @@ from pandasai.llm import AzureOpenAI
 
 
 # create session states
-if 'filters' not in st.session_state:
-    st.session_state.filters = []
 if 'report' not in st.session_state:
     st.session_state.report = None
 if 'chat_history' not in st.session_state:
@@ -64,48 +62,73 @@ if uploaded_df is not None:
         df = pd.read_excel(uploaded_df)
 
 
-st.success(f"Selected Dataset: {df_name}") 
+if df is not None: st.write(df)
+st.write("")
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 # filter the dataset
 st.markdown("#### Filter Dataset")
-
-country_codes = {
-    'Republic of Burundi': 'BDI',	
-    'Republic of the Congo': 'COG',
-    'Democratic Republic of the Congo': 'COD',	
-    'Republic of Djibouti': 'DJI',
-    'Federal Democratic Republic of Ethiopia': 'ETH',
-    'Republic of Ghana': 'GHA',
-    'Republic of Liberia': 'LBR',
-    'Republic of Mozambique': 'MOZ',
-    'Republic of Namibia': 'NAM',
-    'Republic of Niger': 'NER',
-    'Federal Republic of Nigeria': 'NGA',
-    'Republic of Rwanda': 'RWA',
-    'Republic of Senegal': 'SEN',
-    'Republic of Sierra Leone': 'SLE',
-    'Federal Republic of Somalia': 'SOM',
-    'United Republic of Tanzania': 'TZA',
-    'Republic of Zambia': 'ZMB',
-    'Republic of Zimbabwe': 'ZWE'
-}
-
 if df is not None:
-    # selected_countries = st.multiselect('select countries:', list(country_codes.keys()))
-    # selected_country_codes = [country_codes[country] for country in selected_countries]
-    selected_columns = st.multiselect('select columns:', df.columns.tolist(), df.columns.tolist())
+    with st.expander("show filters:"):
+        st.markdown("##### Column Filters")
+        
+        selected_columns = st.multiselect('select columns to filter:', df.columns.tolist(), df.columns.tolist())
+        
+        filtered_df = df.copy()
+        
+        for col in selected_columns:
+            st.markdown(f"##### Filter by {col}")
+            if pd.api.types.is_numeric_dtype(df[col]):
+                if df[col].isna().all() or df[col].min() == df[col].max():
+                    st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
+                else:
+                    min_val, max_val = float(df[col].min()), float(df[col].max())
+                    selected_range = st.slider(f"select range for {col}:", min_val, max_val, (min_val, max_val))
+                    filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
+            
+            elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
+                if df[col].isna().all() or df[col].nunique() == 1:
+                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
+                else:
+                    unique_vals = df[col].dropna().unique().tolist()
+                    selected_vals = st.multiselect(f"Select values for {col}:", unique_vals, unique_vals)
+                    filtered_df = filtered_df[filtered_df[col].isin(selected_vals)]
+            
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                if df[col].isna().all() or df[col].min() == df[col].max():
+                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
+                else:
+                    min_date, max_date = df[col].min(), df[col].max()
+                    selected_dates = st.date_input(f"Select date range for {col}:", [min_date, max_date])
+                    filtered_df = filtered_df[(df[col] >= pd.to_datetime(selected_dates[0])) & (df[col] <= pd.to_datetime(selected_dates[1]))]
+            
+            else:
+                st.write(f"Unsupported column type for filtering: {df[col].dtype}")
+    
+
+        filtered_df = filtered_df[selected_columns]
+
+        if filtered_df.empty:
+            st.write("The filters applied have resulted in an empty dataset. Please adjust your filters.")
+        else:
+            st.markdown("### Filtered Data")
+            st.write(filtered_df)
 else:
-    st.write("no dataset selected")
-    selected_columns = None
-    selected_countries = None
-    selected_country_codes = None
+    st.write("No dataset selected")
+    filtered_df = None
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
    
 # summary section
-st.markdown("#### Summary")
-if df is not None:
-    if not df[selected_columns].empty:
-        summary = df[selected_columns].describe()
+st.markdown("### Summary")
+if filtered_df is not None:
+    if not filtered_df.empty:
+        summary = filtered_df.describe()
 
         columns = summary.columns
         tabs = st.tabs(columns.to_list())
@@ -148,8 +171,8 @@ with text_col:
 
 with send_col:
     if st.button('Send'):
-        if df is not None:
-            if df[selected_columns].empty:
+        if filtered_df is not None:
+            if filtered_df.empty:
                 st.write("No data available for the subsetted data.")
             else:
                 try:
@@ -160,7 +183,7 @@ with send_col:
                         deployment_name="gpt35osaa"
                     )
 
-                    smart_df = SmartDataframe(df[selected_columns], config={"llm": azure})
+                    smart_df = SmartDataframe(filtered_df, config={"llm": azure})
                     response = smart_df.chat(query)
                     
                     # agent = Agent(smart_df)
@@ -176,8 +199,8 @@ with st.expander("show conversation"):
     if st.button('clear conversation'):
         st.session_state.chat_history = []
     
-    if df is not None:
-        if df[selected_columns].empty:
+    if filtered_df is not None:
+        if filtered_df.empty:
             st.write("No data available for the subsetted data.")
         else:
             display_chat_history()
@@ -194,11 +217,11 @@ st.subheader("Dataset Profile Report")
 st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF document in the section below.")
 
 if st.button('Generate Dataset Profile Report'):
-    if df is not None:
-        if df[selected_columns].empty:
+    if filtered_df is not None:
+        if filtered_df.empty:
             st.write("no data available for the subsetted data.")
         else:
-            profile = ProfileReport(df[selected_columns], title=f"Profile Report for {df_name}", explorative=True)
+            profile = ProfileReport(filtered_df, title=f"Profile Report for {df_name}", explorative=True)
             st.session_state.report = profile
 
         with st.expander("show report"):

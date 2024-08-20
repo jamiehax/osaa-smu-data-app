@@ -37,12 +37,65 @@ if uploaded_df is not None:
 
 
 st.success(f"Selected Dataset: {df_name}") 
+
+# filter the dataset
+st.markdown("#### Filter Dataset")
+if df is not None:
+    with st.expander("show filters:"):
+        st.markdown("##### Column Filters")
+        
+        selected_columns = st.multiselect('select columns to filter:', df.columns.tolist(), df.columns.tolist())
+        
+        filtered_df = df.copy()
+        
+        for col in selected_columns:
+            st.markdown(f"##### Filter by {col}")
+            if pd.api.types.is_numeric_dtype(df[col]):
+                if df[col].isna().all() or df[col].min() == df[col].max():
+                    st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
+                else:
+                    min_val, max_val = float(df[col].min()), float(df[col].max())
+                    selected_range = st.slider(f"select range for {col}:", min_val, max_val, (min_val, max_val))
+                    filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
+            
+            elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
+                if df[col].isna().all() or df[col].nunique() == 1:
+                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
+                else:
+                    unique_vals = df[col].dropna().unique().tolist()
+                    selected_vals = st.multiselect(f"Select values for {col}:", unique_vals, unique_vals)
+                    filtered_df = filtered_df[filtered_df[col].isin(selected_vals)]
+            
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                if df[col].isna().all() or df[col].min() == df[col].max():
+                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
+                else:
+                    min_date, max_date = df[col].min(), df[col].max()
+                    selected_dates = st.date_input(f"Select date range for {col}:", [min_date, max_date])
+                    filtered_df = filtered_df[(df[col] >= pd.to_datetime(selected_dates[0])) & (df[col] <= pd.to_datetime(selected_dates[1]))]
+            
+            else:
+                st.write(f"Unsupported column type for filtering: {df[col].dtype}")
+    
+
+        filtered_df = filtered_df[selected_columns]
+
+        if filtered_df.empty:
+            st.write("The filters applied have resulted in an empty dataset. Please adjust your filters.")
+        else:
+            st.markdown("### Filtered Data")
+            st.write(filtered_df)
+else:
+    st.write("No dataset selected")
+    filtered_df = None
+
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-
 st.subheader("Mitosheet")
-if df is not None:
-    new_dfs, code = spreadsheet(df)
+if filtered_df is not None:
+    new_dfs, code = spreadsheet(filtered_df)
+    st.markdown("##### Generated Code:")
+    st.write(code)
 else:
     st.write("no dataset selected")
