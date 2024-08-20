@@ -49,7 +49,7 @@ countries = wb.economy.list()
 selected_countries = st.multiselect("available countries:", countries, label_visibility="collapsed")
 
 st.markdown("##### Select Time Range:")
-selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1990, 2024), step=1)
+selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1960, 2024), step=1)
 
 try:
     df = wb.data.DataFrame(selected_indicators, selected_countries, list(range(selected_years[0], selected_years[1]))).reset_index()
