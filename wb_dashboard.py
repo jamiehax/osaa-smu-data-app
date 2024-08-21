@@ -12,6 +12,9 @@ st.markdown("Explore the World Bank's data.")
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
+# read in iso3 code reference df
+iso3_reference_df = pd.read_csv('iso3_country_reference.csv')
+
 st.markdown("### Explore Indicators:")
 st.markdown("Explore available indicators by entering keywords. For example, to find indicators related to fossil fuels, enter *fossil fuels*.")
 text_col, send_col = st.columns(2)
@@ -46,16 +49,54 @@ selected_indicators = st.multiselect("available indicators:", indicators, label_
 
 st.markdown("##### Select Countries:")
 countries = wb.economy.list()
-selected_countries = st.multiselect("available countries:", countries, label_visibility="collapsed")
+formatted_countries = [f"{country['id']} / {country['value']}" for country in countries]
+selected_countries = st.multiselect("available countries:", formatted_countries, label_visibility="collapsed")
+selected_iso3_codes = [entry.split(' / ')[0] for entry in selected_countries]
 
-st.markdown("##### Select Time Range:")
-selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1960, 2024), step=1, label_visibility="collapsed")
 
-try:
-    df = wb.data.DataFrame(selected_indicators, selected_countries, list(range(selected_years[0], selected_years[1]))).reset_index()
-    st.write(df)
-except Exception as e:
-    df = None
+st.markdown("#### Select Time Range")
+time_selection = st.radio("Which time selection method", ["Time Range", "Most Recent Value"], label_visibility="collapsed")
+if time_selection == "Time Range":
+    selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1960, 2024), step=1, label_visibility="collapsed")
+
+    try:
+        # get world bank data
+        wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
+        
+        # add country reference codes
+        df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']],
+                                left_on='economy', right_on='iso3', how='left')
+        
+        # reorder columns
+        df.drop(columns=['economy'], inplace=True)
+        df = df.rename(columns={'series': 'Indicator'})
+        columns_to_insert = ['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
+        for i, column in enumerate(columns_to_insert):
+            df.insert(1 + i, column, df.pop(column))
+
+        st.write(df)
+    except Exception as e:
+        df = None
+else:
+    mrv = st.number_input("choose the number of years to get the most recent value within", value=5, placeholder="enter a number of years")
+    try:
+        # get world bank data
+        wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, mrv=mrv).reset_index()
+        
+        # add country reference codes
+        df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']],
+                                left_on='economy', right_on='iso3', how='left')
+        
+        # reorder columns
+        df.drop(columns=['economy'], inplace=True)
+        df = df.rename(columns={'series': 'Indicator'})
+        columns_to_insert = ['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
+        for i, column in enumerate(columns_to_insert):
+            df.insert(1 + i, column, df.pop(column))
+
+        st.write(df)
+    except Exception as e:
+        df = None
             
 
 # filter the dataset
@@ -109,27 +150,39 @@ else:
     st.write("data not available for the selected indicator(s), countries, and year(s).")
     filtered_df = None
 
+            
+# download
+if filtered_df is not None:
+    csv = filtered_df.to_csv(index=False)
+    st.download_button(
+        label="Download Dataset as a CSV File",
+        data=csv,
+        file_name='data.csv',
+        mime='text/csv',
+        disabled=(filtered_df is None)
+    )
+
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 st.subheader("Explore Data")
 if filtered_df is not None:
     try:
-        df_melted = df.melt(id_vars=['economy', 'series'], var_name='Year', value_name='Value')
+        df_melted = filtered_df.melt(id_vars=['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
         df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
 
         fig = px.line(df_melted, 
-                  x='Year', 
-                  y='Value', 
-                  color='economy', 
-                  symbol='series',  # Different markers for different series
-                  markers=True,
-                  labels={'economy': 'Country', 'series': 'Indicator', 'Value': 'Value', 'Year': 'Year'},
-                  title="Time Series of Indicators by Country and Indicator")
-    
+                    x='Year', 
+                    y='Value', 
+                    color='Country or Area', 
+                    symbol='Indicator',
+                    markers=True,
+                    labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Value': 'Value', 'Year': 'Year'},
+                    title="Time Series of Indicators by Country and Indicator")
+
         st.plotly_chart(fig)
     except Exception as e:
-        st.error("Error generating graph. This is likely due to the data having only one selected country, year, and or indicator. That graph is not supported yet. Please make sure the selected data has more than 1 country, indicator, and year.")
+        st.error(f"Error generating graph:\n\n{e}  \n\n This is likely due to the data having only one selected country, year, and or indicator. That graph is not supported yet. Please make sure the selected data has more than 1 country, indicator, and year.")
 
 else:
     st.write("data not available for the selected indicator(s), countries, and year(s).")
