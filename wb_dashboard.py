@@ -3,6 +3,9 @@ import wbgapi as wb
 import pandas as pd
 import plotly.express as px
 
+# set world bank database
+wb.db = 1
+
 
 # title and introduction
 st.title("OSAA SMU's World Bank Data Dashboard")
@@ -15,43 +18,30 @@ st.write("")
 # read in iso3 code reference df
 iso3_reference_df = pd.read_csv('iso3_country_reference.csv')
 
-st.markdown("### Explore Indicators:")
-st.markdown("Explore available indicators by entering keywords. For example, to find indicators related to fossil fuels, enter *fossil fuels*.")
-text_col, send_col = st.columns(2)
-with text_col:
-    search_query = st.text_input(
-            "enter your query",
-            label_visibility='collapsed',
-            placeholder="enter your query"
-        )
-with send_col:
-    query_result = None
-    if st.button('search'):
-        if search_query:
-            query_result = wb.search(search_query)
+st.markdown("#### Select Database:")
+databases = [(database["id"], database["name"]) for database in wb.source.list()]
+selected_db_name = st.selectbox("available indicators:", [database[1] for database in databases], label_visibility="collapsed")
+selected_db = next(database[0] for database in databases if database[1] == selected_db_name)
+if selected_db: wb.db = selected_db
 
-with st.expander("show results"):
-    if query_result:
-        st.write(query_result)
-    else:
-        st.write("please enter a query")
+st.markdown("#### Select Indicators:")
+st.write("NOTE: keyword queries ignore the parenthetical part of the indicator name. For example, 'GDP' will not match 'Gross domestic savings (% of GDP)'. To search the parenthetical part too, add an exclamation point like this: '!GDP'")
+search_query = st.text_input(
+        "enter keywords to filter indicators",
+        label_visibility='collapsed',
+        placeholder="enter keywords to filter indicators"
+    )
+query_result = wb.series.list(q=search_query)
 
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
+formatted_indicators = [f"{indicator['id']} - {indicator['value']}" for indicator in query_result]
+selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed")
+selected_indicators = [indicator.split(' - ')[0] for indicator in selected_indicator_names]
 
-# find and choose a dataset
-st.markdown("### Select Data ")
-st.write("Search World Bank Indicators.")
-
-st.markdown("##### Select Indicators:")
-indicators = wb.series.list()
-selected_indicators = st.multiselect("available indicators:", indicators, label_visibility="collapsed")
-
-st.markdown("##### Select Countries:")
+st.markdown("#### Select Countries:")
 countries = wb.economy.list()
-formatted_countries = [f"{country['id']} / {country['value']}" for country in countries]
+formatted_countries = [f"{country['id']} - {country['value']}" for country in countries]
 selected_countries = st.multiselect("available countries:", formatted_countries, label_visibility="collapsed")
-selected_iso3_codes = [entry.split(' / ')[0] for entry in selected_countries]
+selected_iso3_codes = [entry.split(' - ')[0] for entry in selected_countries]
 
 
 st.markdown("#### Select Time Range")

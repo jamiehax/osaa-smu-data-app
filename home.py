@@ -20,6 +20,14 @@ with col1:
 with col2:
     st.page_link("wb_dashboard.py", label="WB Dashboard", icon=":material/bar_chart:")
 
+
+st.subheader("SDG Data Dashboard")
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown("The SDG Dashboard allows you to access the United Nations Sustainable Development Groups DataBase.")
+with col2:
+    st.page_link("sdg_dashboard.py", label="SDG Dashboard", icon=":material/show_chart:")
+
 st.subheader("Data Sheet")
 col1, col2 = st.columns(2)
 with col1:
