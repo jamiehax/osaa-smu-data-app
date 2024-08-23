@@ -60,7 +60,7 @@ if time_selection == "Time Range":
         df.drop(columns=['iso3'], inplace=True)
         df = df.rename(columns={'series': 'Indicator'})
         df = df.rename(columns={'economy': 'iso3'})
-        columns_to_insert = ['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
+        columns_to_insert = ['Indicator', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
         for i, column in enumerate(columns_to_insert):
             df.insert(1 + i, column, df.pop(column))
 
