@@ -54,12 +54,12 @@ if time_selection == "Time Range":
         wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
         
         # add country reference codes
-        df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']],
-                                left_on='economy', right_on='iso3', how='left')
+        df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']], left_on='economy', right_on='iso3', how='left')
         
-        # reorder columns
-        df.drop(columns=['economy'], inplace=True)
+        # reorder and rename columns
+        df.drop(columns=['iso3'], inplace=True)
         df = df.rename(columns={'series': 'Indicator'})
+        df = df.rename(columns={'economy': 'iso3'})
         columns_to_insert = ['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
         for i, column in enumerate(columns_to_insert):
             df.insert(1 + i, column, df.pop(column))
