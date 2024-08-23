@@ -56,13 +56,13 @@ if time_selection == "Time Range":
         # add country reference codes
         df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
         
-        # reorder and rename columns
+        # rename and drop duplicate columns
         df.drop(columns=['iso3'], inplace=True)
-        df = df.rename(columns={'series': 'Indicator'})
-        df = df.rename(columns={'economy': 'iso3'})
-        columns_to_insert = ['Indicator', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
-        for i, column in enumerate(columns_to_insert):
-            df.insert(1 + i, column, df.pop(column))
+        df = df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
+
+        # reorder columns
+        column_order = ['Indicator', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
+        df = df[column_order]
 
         st.write(df)
     except Exception as e:
