@@ -61,7 +61,7 @@ if time_selection == "Time Range":
         df = df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
 
         # reorder columns
-        column_order = ['Indicator', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
+        column_order = ['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
         df = df[column_order]
 
         st.write(df)
