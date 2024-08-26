@@ -48,43 +48,45 @@ st.markdown("#### Select Time Range")
 time_selection = st.radio("Which time selection method", ["Time Range", "Most Recent Value"], label_visibility="collapsed")
 if time_selection == "Time Range":
     selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1960, 2024), step=1, label_visibility="collapsed")
-
     try:
+        
         # get world bank data
-        wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
+        if st.button("get data"):
+            wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
         
-        # add country reference codes
-        df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
-        
-        # rename and drop duplicate columns
-        df.drop(columns=['iso3'], inplace=True)
-        df = df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
+            # add country reference codes
+            df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
+            
+            # rename and drop duplicate columns
+            df.drop(columns=['iso3'], inplace=True)
+            df = df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
 
-        # reorder columns
-        column_order = ['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
-        df = df[column_order]
+            # reorder columns
+            column_order = ['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
+            df = df[column_order]
 
-        st.write(df)
+            st.dataframe(df)
     except Exception as e:
         df = None
 else:
     mrv = st.number_input("choose the number of years to get the most recent value within", value=5, placeholder="enter a number of years")
     try:
-        # get world bank data
-        wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, mrv=mrv).reset_index()
+       # get world bank data
+        if st.button("get data"):
+            wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, mrv=mrv).reset_index()
         
-        # add country reference codes
-        df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']],
-                                left_on='economy', right_on='iso3', how='left')
-        
-        # reorder columns
-        df.drop(columns=['economy'], inplace=True)
-        df = df.rename(columns={'series': 'Indicator'})
-        columns_to_insert = ['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
-        for i, column in enumerate(columns_to_insert):
-            df.insert(1 + i, column, df.pop(column))
+            # add country reference codes
+            df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']],
+                                    left_on='economy', right_on='iso3', how='left')
+            
+            # reorder columns
+            df.drop(columns=['economy'], inplace=True)
+            df = df.rename(columns={'series': 'Indicator'})
+            columns_to_insert = ['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
+            for i, column in enumerate(columns_to_insert):
+                df.insert(1 + i, column, df.pop(column))
 
-        st.write(df)
+            st.dataframe(df)
     except Exception as e:
         df = None
             
