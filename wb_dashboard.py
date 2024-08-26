@@ -3,8 +3,19 @@ import wbgapi as wb
 import pandas as pd
 import plotly.express as px
 
-# set world bank database
-wb.db = 1
+# cached functions for retreiving metadata
+@st.cache_data
+def get_databases():
+    return [(database["id"], database["name"]) for database in wb.source.list()]
+
+@st.cache_data
+def get_query_result(search_query, db):
+    return list(wb.series.list(q=search_query))
+
+@st.cache_data
+def get_countries():
+    return list(wb.economy.list())
+    
 
 
 # title and introduction
@@ -19,7 +30,7 @@ st.write("")
 iso3_reference_df = pd.read_csv('iso3_country_reference.csv')
 
 st.markdown("#### Select Database:")
-databases = [(database["id"], database["name"]) for database in wb.source.list()]
+databases = get_databases()
 selected_db_name = st.selectbox("available indicators:", [database[1] for database in databases], label_visibility="collapsed")
 selected_db = next(database[0] for database in databases if database[1] == selected_db_name)
 if selected_db: wb.db = selected_db
@@ -31,14 +42,14 @@ search_query = st.text_input(
         label_visibility='collapsed',
         placeholder="enter keywords to filter indicators"
     )
-query_result = wb.series.list(q=search_query)
+query_result = get_query_result(search_query, selected_db)
 
 formatted_indicators = [f"{indicator['id']} - {indicator['value']}" for indicator in query_result]
 selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed")
 selected_indicators = [indicator.split(' - ')[0] for indicator in selected_indicator_names]
 
 st.markdown("#### Select Countries:")
-countries = wb.economy.list()
+countries = get_countries()
 formatted_countries = [f"{country['id']} - {country['value']}" for country in countries]
 selected_countries = st.multiselect("available countries:", formatted_countries, label_visibility="collapsed")
 selected_iso3_codes = [entry.split(' - ')[0] for entry in selected_countries]
@@ -66,6 +77,8 @@ if time_selection == "Time Range":
             df = df[column_order]
 
             st.dataframe(df)
+        else:
+            df = None
     except Exception as e:
         df = None
 else:
@@ -87,6 +100,8 @@ else:
                 df.insert(1 + i, column, df.pop(column))
 
             st.dataframe(df)
+        else:
+            df = None
     except Exception as e:
         df = None
             
