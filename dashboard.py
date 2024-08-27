@@ -85,9 +85,14 @@ if df is not None:
                 if df[col].isna().all() or df[col].min() == df[col].max():
                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
                 else:
-                    min_val, max_val = float(df[col].min()), float(df[col].max())
-                    selected_range = st.slider(f"select range for {col}:", min_val, max_val, (min_val, max_val))
-                    filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
+                    if pd.api.types.is_integer_dtype(df[col]):
+                        min_val, max_val = int(df[col].min()), int(df[col].max())
+                        selected_range = st.slider(f"Select range for {col} (int):", min_val, max_val, (min_val, max_val), step=1)
+                    elif pd.api.types.is_float_dtype(df[col]):
+                        min_val, max_val = float(df[col].min()), float(df[col].max())
+                        selected_range = st.slider(f"Select range for {col} (float):", min_val, max_val, (min_val, max_val))
+            
+                filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
             
             elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
                 if df[col].isna().all() or df[col].nunique() == 1:
