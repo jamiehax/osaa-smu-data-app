@@ -1,6 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
-from helper_functions import get_dataset_names, get_df
+from helper_functions import get_dataset_names, get_df, refresh_db
 import pandas as pd
 from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
 
@@ -20,7 +20,13 @@ st.write("Either search through existing datasets or upload your own dataset as 
 
 st.markdown("##### Search Datasets")
 dataset_names = get_dataset_names(st.session_state.db_path)
-df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
+
+col1, col2 = st.columns(2)
+with col1:
+    df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
+with col2:
+    if st.button("refresh database", use_container_width=True):
+        refresh_db(st.session_state.db_path)
 
 if df_name is not None:
     df = get_df(st.session_state.db_path, df_name)
