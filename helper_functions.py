@@ -1,6 +1,7 @@
 import pandas as pd
 import duckdb
 import os
+import numpy as np
 
 
 def preprocess(df):
@@ -67,7 +68,7 @@ def setup_db():
                 })
 
         df_test = pd.DataFrame(data)
-        table_name = "test dataset"
+        table_name = "test_dataset"
 
         # add the test dataset to DuckDB
         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
@@ -79,6 +80,15 @@ def setup_db():
 
     return DB_PATH
 
+
+def refresh_db(db_path):
+    """
+    Refresh the database (delete existing database and run setup).
+    """
+    if os.path.isfile(db_path):
+        os.remove(db_path)
+
+    setup_db()
 
 # simulate getting dataset names from database
 def get_dataset_names(db_path):
