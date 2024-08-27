@@ -61,13 +61,13 @@ def setup_db():
                     "Year": year,
                     "Population": np.random.randint(1_000_000, 100_000_000),
                     "GDP": np.random.randint(1_000_000_000, 500_000_000_000),
-                    "Arable_Land_sqkm": np.random.randint(10_000, 200_000),
-                    "Urban_Land_sqkm": np.random.randint(5_000, 100_000),
-                    "Forest_Land_sqkm": np.random.randint(1_000, 50_000)
+                    "Arable Land (km2)": np.random.randint(10_000, 200_000),
+                    "Urban Land (km2)": np.random.randint(5_000, 100_000),
+                    "Forest Land (km2)": np.random.randint(1_000, 50_000)
                 })
 
         df_test = pd.DataFrame(data)
-        table_name = "test_dataset"
+        table_name = "test dataset"
 
         # add the test dataset to DuckDB
         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
