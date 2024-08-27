@@ -29,7 +29,7 @@ def display_chat_history():
 
 # title and introduction
 st.title("OSAA SMU's Data Dashboard")
-st.markdown("The Data Dashboard allows for quick access to summary statistics about a dataset. First select a dataset to view by searching the available datasets by name. Once you have selected a dataset, you can filter and subset the dataset to only focus on your area(s) of interest. Once you have selected and filtered a dataset, you can view the summary statistics on that data. To generate and download a more detailed summary, go to the *Dataset Profile Report* section once you have selected and filtered the dataset.")
+st.markdown("The Data Dashboard allows for exploratory data analysis on a dataset through quick access to summary statistics and natural language conversations with an AI chatbot that has the ability to understand the dataset. First select a dataset to view by searching the available datasets by name or uploading your own. Once you have selected a dataset, you can filter and subset the dataset to only focus on the area(s) of interest. Once you have selected and filtered a dataset, you can view the summary statistics on that data. To generate and download a more detailed summary, go to the *Dataset Profile Report* section once you have selected and filtered the dataset. Use the *Natural Language Queries* section to understand the data by asking natural language questions to a chatbot that understands the data.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
@@ -116,6 +116,20 @@ if df is not None:
         else:
             st.markdown("### Filtered Data")
             st.write(filtered_df)
+
+            # download
+            if df is not None:
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="download filtered data as a CSV file",
+                    data=csv,
+                    file_name='data.csv',
+                    mime='text/csv',
+                    disabled=(df is None),
+                    type='primary',
+                    use_container_width=True
+                )
+
 else:
     st.write("No dataset selected")
     filtered_df = None
@@ -125,7 +139,7 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
    
 # summary section
-st.markdown("### Summary")
+st.markdown("### Variable Summary")
 if filtered_df is not None:
     if not filtered_df.empty:
         summary = filtered_df.describe()
@@ -214,52 +228,33 @@ st.write("")
 
 # create the dataframe profile and display it
 st.subheader("Dataset Profile Report")
-st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF document in the section below.")
+st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF.")
 
-if st.button('Generate Dataset Profile Report'):
+if st.button('Generate Dataset Profile Report', use_container_width=True):
     if filtered_df is not None:
         if filtered_df.empty:
             st.write("no data available for the subsetted data.")
+            prfile = None
         else:
             profile = ProfileReport(filtered_df, title=f"Profile Report for {df_name}", explorative=True)
-            st.session_state.report = profile
 
         with st.expander("show report"):
             st_profile_report(profile)
 
-    else:
-        st.write("please select a dataset.")
+        if profile is not None:
 
-st.write("")
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
+            with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
+                profile_file_path = tmp_html.name
+                profile.to_file(profile_file_path)
+            
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+                pdf_file_path = tmp_pdf.name
+            
+            pdfkit.from_file(profile_file_path, pdf_file_path)
 
-# download the generated report as a PDF document
-st.subheader("Download the Generated Report as a PDF")
-st.markdown("To download the report, it must first be converted to a PDF document. Click the *Convert to PDF* button below to convert the report to a PDF document. Once it has been converted, a button will appear below to download it.")
-if st.button('Convert to PDF'):
+            with open(pdf_file_path, 'rb') as f:
+                st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True)
 
-    # check to see if profile has been generated
-    if st.session_state.report:
-
-        # retrieve the profile from the session state
-        profile = st.session_state.report
-
-        with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
-            profile_file_path = tmp_html.name
-            profile.to_file(profile_file_path)
-        
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
-            pdf_file_path = tmp_pdf.name
-        
-        pdfkit.from_file(profile_file_path, pdf_file_path)
-
-        with open(pdf_file_path, 'rb') as f:
-            st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf')
-
-        # clean up temporary files
-        os.remove(profile_file_path)
-        os.remove(pdf_file_path)
-
-    else:
-        st.write("no report has been generated to convert")
+            # clean up temporary files
+            os.remove(profile_file_path)
+            os.remove(pdf_file_path)

@@ -8,7 +8,10 @@ from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
 # title and introduction
 st.title("OSAA SMU's Data Visulization Tool")
 
-st.markdown("The SMU's Data Visulization tool allows for the automatic creation of data visulizations with *PyGWalker*.")
+st.markdown("The Data Visualization tool uses *PyGWalker* to automatically create data visualizations like graphs and charts on uploaded datasets. First, select a dataset by choosing from one of the existing datasets or uploading your own. Then, filter the dataset as needed (removing columns, filtering data by column values, etc.). The selected and filtered dataset can then be used to create visualizations with PyGWalker.")
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
 
 # find and choose a dataset
 st.subheader("Select a Dataset")
@@ -37,7 +40,8 @@ if uploaded_df is not None:
         df = pd.read_excel(uploaded_df)
 
 
-st.success(f"Selected Dataset: {df_name}") 
+if df is not None: st.write(df)
+st.write("")
 
 # filter the dataset
 st.markdown("#### Filter Dataset")
@@ -86,10 +90,24 @@ if df is not None:
         else:
             st.markdown("### Filtered Data")
             st.write(filtered_df)
+
+            # download
+            if df is not None:
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="download filtered data as a CSV file",
+                    data=csv,
+                    file_name='data.csv',
+                    mime='text/csv',
+                    disabled=(df is None),
+                    type='primary',
+                    use_container_width=True
+                )
+
 else:
     st.write("No dataset selected")
     filtered_df = None
-    
+
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 

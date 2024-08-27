@@ -21,7 +21,7 @@ def get_countries():
 # title and introduction
 st.title("OSAA SMU's World Bank Data Dashboard")
 
-st.markdown("Explore the World Bank's data.")
+st.markdown("The WorldBank Data Dashboard allows for exploratory data analysis of the World Bank's Data. First, select one of the WorldBank's databases to use. Then select the indicators, countries, and time range to get data for. Indicators can be filtered with keywords. For example, if you are using the *Doing Business* database and interested in indicators related to construction, enter *construction* into the search box to limit the indicators to only those that mention construction.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
@@ -45,13 +45,13 @@ search_query = st.text_input(
 query_result = get_query_result(search_query, selected_db)
 
 formatted_indicators = [f"{indicator['id']} - {indicator['value']}" for indicator in query_result]
-selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed")
+selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed", placeholder="select indicator(s)")
 selected_indicators = [indicator.split(' - ')[0] for indicator in selected_indicator_names]
 
 st.markdown("#### Select Countries:")
 countries = get_countries()
 formatted_countries = [f"{country['id']} - {country['value']}" for country in countries]
-selected_countries = st.multiselect("available countries:", formatted_countries, label_visibility="collapsed")
+selected_countries = st.multiselect("available countries:", formatted_countries, label_visibility="collapsed", placeholder="select countries")
 selected_iso3_codes = [entry.split(' - ')[0] for entry in selected_countries]
 
 
@@ -62,8 +62,16 @@ if time_selection == "Time Range":
     try:
         
         # get world bank data
-        if st.button("get data"):
+        if st.button("get data", type='primary', use_container_width=True):
             wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
+
+            # deal with edge cases where there is no economy column
+            if 'economy' not in wb_df.columns:
+                wb_df['economy'] = selected_iso3_codes[0]
+
+            # deal with edge cases where there is no series column
+            if 'series' not in wb_df.columns:
+                wb_df['series'] = selected_indicators[0]
         
             # add country reference codes
             df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
@@ -73,109 +81,68 @@ if time_selection == "Time Range":
             df = df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
 
             # reorder columns
-            column_order = ['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
+            column_order = ['Indicator', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
             df = df[column_order]
 
             st.dataframe(df)
         else:
             df = None
     except Exception as e:
+        st.error(f"no data retrieved. this is most likely due to blank indicator, country, or time values. please ensure there are values for the indicator, country, and time range. \n\n Error: {e}")
         df = None
 else:
     mrv = st.number_input("choose the number of years to get the most recent value within", value=5, placeholder="enter a number of years")
     try:
        # get world bank data
-        if st.button("get data"):
+        if st.button("get data", type='primary', use_container_width=True):
             wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, mrv=mrv).reset_index()
+
+            # deal with edge cases where there is no economy column
+            if 'economy' not in wb_df.columns:
+                wb_df['economy'] = selected_iso3_codes[0]
+
+            # deal with edge cases where there is no series column
+            if 'series' not in wb_df.columns:
+                wb_df['series'] = selected_indicators[0]
         
             # add country reference codes
-            df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']],
-                                    left_on='economy', right_on='iso3', how='left')
+            df = wb_df.merge(iso3_reference_df[['iso3', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'm49']], left_on='economy', right_on='iso3', how='left')
             
+            # rename and drop duplicate columns
+            df.drop(columns=['iso3'], inplace=True)
+            df = df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
+
             # reorder columns
-            df.drop(columns=['economy'], inplace=True)
-            df = df.rename(columns={'series': 'Indicator'})
-            columns_to_insert = ['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']
-            for i, column in enumerate(columns_to_insert):
-                df.insert(1 + i, column, df.pop(column))
+            column_order = ['Indicator', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
+            df = df[column_order]
 
             st.dataframe(df)
         else:
             df = None
     except Exception as e:
+        st.error(f"Error retrieving the data. This is most likely due to blank indicator, country, or time values. Please ensure there are values for the indicator, country, and time range. \n\n Error: {e}")
         df = None
-            
 
-# filter the dataset
-st.markdown("#### Filter Dataset")
-if df is not None:
-    with st.expander("show filters:"):
-        st.markdown("##### Column Filters")
-        
-        selected_columns = st.multiselect('select columns to filter:', df.columns.tolist(), df.columns.tolist())
-        
-        filtered_df = df.copy()
-        
-        for col in selected_columns:
-            st.markdown(f"##### Filter by {col}")
-            if pd.api.types.is_numeric_dtype(df[col]):
-                if df[col].isna().all() or df[col].min() == df[col].max():
-                    st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
-                else:
-                    min_val, max_val = float(df[col].min()), float(df[col].max())
-                    selected_range = st.slider(f"select range for {col}:", min_val, max_val, (min_val, max_val))
-                    filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
-            
-            elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
-                if df[col].isna().all() or df[col].nunique() == 1:
-                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
-                else:
-                    unique_vals = df[col].dropna().unique().tolist()
-                    selected_vals = st.multiselect(f"Select values for {col}:", unique_vals, unique_vals)
-                    filtered_df = filtered_df[filtered_df[col].isin(selected_vals)]
-            
-            elif pd.api.types.is_datetime64_any_dtype(df[col]):
-                if df[col].isna().all() or df[col].min() == df[col].max():
-                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
-                else:
-                    min_date, max_date = df[col].min(), df[col].max()
-                    selected_dates = st.date_input(f"Select date range for {col}:", [min_date, max_date])
-                    filtered_df = filtered_df[(df[col] >= pd.to_datetime(selected_dates[0])) & (df[col] <= pd.to_datetime(selected_dates[1]))]
-            
-            else:
-                st.write(f"Unsupported column type for filtering: {df[col].dtype}")
-    
-
-        filtered_df = filtered_df[selected_columns]
-
-        if filtered_df.empty:
-            st.write("The filters applied have resulted in an empty dataset. Please adjust your filters.")
-        else:
-            st.markdown("### Filtered Data")
-            st.write(filtered_df)
-else:
-    st.write("data not available for the selected indicator(s), countries, and year(s).")
-    filtered_df = None
-
-            
 # download
-if filtered_df is not None:
-    csv = filtered_df.to_csv(index=False)
+if df is not None:
+    csv = df.to_csv(index=False)
     st.download_button(
-        label="Download Dataset as a CSV File",
+        label="download filtered data as a CSV file",
         data=csv,
         file_name='data.csv',
         mime='text/csv',
-        disabled=(filtered_df is None)
+        disabled=(df is None),
+        type='primary',
+        use_container_width=True
     )
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 st.subheader("Explore Data")
-if filtered_df is not None:
+if df is not None:
     try:
-        df_melted = filtered_df.melt(id_vars=['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
+        df_melted = df.melt(id_vars=['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
         df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
 
         fig = px.line(df_melted, 
@@ -189,7 +156,7 @@ if filtered_df is not None:
 
         st.plotly_chart(fig)
     except Exception as e:
-        st.error(f"Error generating graph:\n\n{e}  \n\n This is likely due to the data having only one selected country, year, and or indicator. That graph is not supported yet. Please make sure the selected data has more than 1 country, indicator, and year.")
+        st.error(f"Error generating graph:\n\n{e}")
 
 else:
     st.write("data not available for the selected indicator(s), countries, and year(s).")
