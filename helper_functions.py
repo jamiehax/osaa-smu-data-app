@@ -48,7 +48,33 @@ def setup_db():
             conn.execute("INSERT INTO metadata (id, name) VALUES (?, ?)", (idx, table_name))
 
 
-        # Close the connection
+        # create a test dataset
+        countries = ["Nigeria", "Kenya", "South Africa", "Ghana", "Egypt", "Morocco", "Ethiopia", "Tanzania", "Uganda", "Algeria"]
+        years = list(range(2000, 2024))
+        
+        # generate data
+        data = []
+        for country in countries:
+            for year in years:
+                data.append({
+                    "Country": country,
+                    "Year": year,
+                    "Population": np.random.randint(1_000_000, 100_000_000),
+                    "GDP": np.random.randint(1_000_000_000, 500_000_000_000),
+                    "Arable_Land_sqkm": np.random.randint(10_000, 200_000),
+                    "Urban_Land_sqkm": np.random.randint(5_000, 100_000),
+                    "Forest_Land_sqkm": np.random.randint(1_000, 50_000)
+                })
+
+        df_test = pd.DataFrame(data)
+        table_name = "test_dataset"
+
+        # add the test dataset to DuckDB
+        conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+        conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df_test")
+        conn.execute("INSERT INTO metadata (id, name) VALUES (?, ?)", (len(csv_files), table_name))
+
+        # close the connection
         conn.close()
 
     return DB_PATH
