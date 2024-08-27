@@ -32,7 +32,7 @@ st.markdown("The SDG Dashboard allows for exploratory data analysis of the Unite
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-st.markdown("#### Explore Sustainable Development Goals")
+st.markdown("### Explore Sustainable Development Goals")
 goals_url = "v1/sdg/Goal/List?includechildren=false"
 goals_data = get_data(f"{BASE_URL}/{goals_url}")
 if goals_data is not None:
@@ -42,7 +42,7 @@ if goals_data is not None:
 
     st.write(selected_goal_data['description'])
 
-    st.markdown(f"#### Available Indicators for *{selected_goal_title}*")
+    st.markdown(f"##### Available Indicators for *{selected_goal_title}*")
     indicator_url = "v1/sdg/Indicator/List"
     indicator_data = get_data(f"{BASE_URL}/{indicator_url}")
     if indicator_data is not None:
@@ -118,16 +118,21 @@ with col2:
 
         df = pd.DataFrame(extracted_data)
 
-        # add country reference codes
-        df = df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='m49', right_on='m49', how='left')
+        if not df.empty:
 
-        # clean dataframe
-        df['Value'] = pd.to_numeric(df['Value'], errors='coerce')
-        df['Year'] = df['Year'].astype(int)
+            # add country reference codes
+            df = df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='m49', right_on='m49', how='left')
 
-        # reorder columns
-        column_order = ['Indicator', 'Series', 'Year', 'Country or Area', 'Value', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49', 'Series Description'] + [col for col in df.columns if col.startswith('YR')]
-        df = df[column_order]
+            # clean dataframe
+            df['Value'] = pd.to_numeric(df['Value'], errors='coerce')
+            df['Year'] = df['Year'].astype(int)
+
+            # reorder columns
+            column_order = ['Indicator', 'Series', 'Year', 'Country or Area', 'Value', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49', 'Series Description'] + [col for col in df.columns if col.startswith('YR')]
+            df = df[column_order]
+
+        else:
+            df = None
 
 
     else:
