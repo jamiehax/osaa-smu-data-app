@@ -1,30 +1,71 @@
 import streamlit as st
-from helper_functions import get_dataset_names, get_df, refresh_db
+from helper_functions import get_dataset_names, get_df
 from ydata_profiling import ProfileReport
 from streamlit_pandas_profiling import st_profile_report
 import pdfkit
 import os
 import tempfile
 import pandas as pd
-from pandasai import SmartDataframe, Agent
-from pandasai.llm import AzureOpenAI
-
+from mitosheet.streamlit.v1 import spreadsheet
+from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
+import streamlit.components.v1 as components
+from langchain_openai import AzureChatOpenAI
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
+from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from operator import itemgetter
+from langchain_core.runnables import RunnablePassthrough
 
 
 # create session states
 if 'report' not in st.session_state:
     st.session_state.report = None
 if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
+    st.session_state.chat_history = {}
 
+# set up LancChain
+# key = st.secrets['azure']
+key = "a7e761d830474f9da547e0bcadc0658a"
+llm = AzureChatOpenAI(
+    azure_deployment="gpt35osaa",
+    api_key=key,
+    azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
+    openai_api_version="2024-05-01-preview"
+)
 
-# function to display chat history
-def display_chat_history():
-    for message in st.session_state.chat_history:
-        if message['role'] == 'user':
-            st.write(f"**You:** {message['content']}")
-        else:
-            st.write(f"**AI:** {message['content']}")
+store = {}
+def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    if session_id not in store:
+        store[session_id] = ChatMessageHistory()
+    return store[session_id]
+
+trimmer = trim_messages(
+    max_tokens=65,
+    strategy="last",
+    token_counter=llm,
+    include_system=True,
+    allow_partial=False,
+    start_on="human",
+)
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are a helpful data analyst assistant. Answer the user's question about the following Pandas DataFrame: {dataframe}",
+        ),
+        MessagesPlaceholder(variable_name="history"),
+        ("human", "{input}"),
+    ]
+)
+
+chain = (
+    RunnablePassthrough.assign(messages=itemgetter("history") | trimmer)
+    | prompt
+    | llm
+)
 
 
 # title and introduction
@@ -36,19 +77,13 @@ st.write("")
 
 
 # find and choose a dataset
-st.subheader("Select a Dataset")
+st.subheader("Select and Filter a Dataset")
 st.write("Either search through existing datasets or upload your own dataset as a CSV or Excel file.")
 
 
 st.markdown("##### Search Datasets")
 dataset_names = get_dataset_names(st.session_state.db_path)
-
-col1, col2 = st.columns(2)
-with col1:
-    df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
-with col2:
-    if st.button("refresh database", use_container_width=True):
-        refresh_db(st.session_state.db_path)
+df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
 if df_name is not None:
     df = get_df(st.session_state.db_path, df_name)
@@ -67,18 +102,9 @@ if uploaded_df is not None:
     elif uploaded_df.name.endswith('.xlsx'):
         df = pd.read_excel(uploaded_df)
 
-
-if df is not None: st.write(df)
-st.write("")
-
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
-
 # filter the dataset
-st.markdown("#### Filter Dataset")
 if df is not None:
-    with st.expander("show filters:"):
+    with st.container(height=500):
         st.markdown("##### Column Filters")
         
         selected_columns = st.multiselect('select columns to filter:', df.columns.tolist(), df.columns.tolist())
@@ -122,28 +148,14 @@ if df is not None:
 
         filtered_df = filtered_df[selected_columns]
 
-        if filtered_df.empty:
-            st.write("The filters applied have resulted in an empty dataset. Please adjust your filters.")
-        else:
-            st.markdown("### Filtered Data")
-            st.write(filtered_df)
-
-            # download
-            if df is not None:
-                csv = df.to_csv(index=False)
-                st.download_button(
-                    label="download filtered data as a CSV file",
-                    data=csv,
-                    file_name='data.csv',
-                    mime='text/csv',
-                    disabled=(df is None),
-                    type='primary',
-                    use_container_width=True
-                )
-
 else:
-    st.write("No dataset selected")
     filtered_df = None
+
+st.markdown("### Dataset")
+if filtered_df is not None and not filtered_df.empty:
+    st.write(filtered_df)
+else:
+    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -151,7 +163,7 @@ st.write("")
    
 # summary section
 st.markdown("### Variable Summary")
-if filtered_df is not None:
+if filtered_df is not None and not filtered_df.empty:
     if not filtered_df.empty:
         summary = filtered_df.describe()
 
@@ -175,8 +187,7 @@ if filtered_df is not None:
     else:
         st.write("no data to present summary statistics on.")
 else:
-    st.write("no dataset selected")
-
+    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("") 
@@ -186,51 +197,51 @@ st.write("")
 st.subheader("Natural Language Queries")
 st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as python and SQL code.")
 
-text_col, send_col = st.columns(2)
-with text_col:
-    query = st.text_input(
-        "enter your query",
-        label_visibility='collapsed',
-        placeholder="enter your query"
-    )
+with st.container(height=500):
+    messages_container = st.container()
 
-with send_col:
-    if st.button('Send'):
-        if filtered_df is not None:
-            if filtered_df.empty:
-                st.write("No data available for the subsetted data.")
-            else:
-                try:
-                    azure = AzureOpenAI(
-                        api_token=st.secrets['azure'],
-                        azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-                        api_version="2024-05-01-preview",
-                        deployment_name="gpt35osaa"
-                    )
-
-                    smart_df = SmartDataframe(filtered_df, config={"llm": azure})
-                    response = smart_df.chat(query)
-                    
-                    # agent = Agent(smart_df)
-                    # response = agent.chat(query)
-
-                    st.session_state.chat_history.append({'role': 'user', 'content': query})
-                    st.session_state.chat_history.append({'role': 'ai', 'content': response})
-                                        
-                except Exception as e:
-                    st.error(e)
-
-with st.expander("show conversation"):
-    if st.button('clear conversation'):
-        st.session_state.chat_history = []
+    config = {"configurable": {"session_id": "abc1"}}
     
-    if filtered_df is not None:
-        if filtered_df.empty:
-            st.write("No data available for the subsetted data.")
-        else:
-            display_chat_history()
-    else:
-        st.write("No dataset selected")
+    # if not st.session_state.chat_history:
+    #     messages_container.chat_message(message["role"]).markdown("Hi! I am a chatbot assistant trained to help you understand your data. Ask me questions about your currently selected dataset in natural language and I will answer them!")
+    # else:
+    #     for message in st.session_state.chat_history:
+    #         chat_history = get_session_history('abc1')
+    #         st.write(chat_history)
+            # messages_container.chat_message(message["role"]).markdown(message["content"])
+        
+    if prompt := st.chat_input("ask about the data..."):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        messages_container.chat_message("user").markdown(prompt)
+
+        # get response
+        df_string = filtered_df.to_string() if filtered_df is not None else "No DataFrame available"
+
+        with_message_history = RunnableWithMessageHistory(
+            chain,
+            get_session_history,
+            input_messages_key="input",
+            history_messages_key="history",
+        )
+
+        response = with_message_history.invoke(
+            {
+                "input": [HumanMessage(content=prompt)],
+                "dataframe": df_string
+            },
+            config=config
+        )
+
+        messages_container.chat_message("assistant").markdown(response.content)
+
+        # messages_container.st.write_stream(with_message_history.stream(
+        #     {"messages": [HumanMessage(content=prompt)], "dataframe": df_string}
+        #     config=config,
+        # ))
+
+    if st.button("clear chat history", type="primary", use_container_width=True):
+        st.session_state.chat_history = []
+        st.rerun()
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -239,33 +250,55 @@ st.write("")
 
 # create the dataframe profile and display it
 st.subheader("Dataset Profile Report")
-st.write("Click the button below to generate a more detailed report of the filtered dataset. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF.")
+st.write("Click the button below to generate a more detailed report of the filtered dataset. If there is no dataset selcted or the filters have resulted in an ampty dataset, the butotn will be disabled. Please ensure there is data selected. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF.")
 
-if st.button('Generate Dataset Profile Report', use_container_width=True):
-    if filtered_df is not None:
-        if filtered_df.empty:
-            st.write("no data available for the subsetted data.")
-            prfile = None
-        else:
-            profile = ProfileReport(filtered_df, title=f"Profile Report for {df_name}", explorative=True)
+if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (filtered_df is not None and not filtered_df.empty)):
+    
+    profile = ProfileReport(filtered_df, title=f"Profile Report for {df_name}", explorative=True)
 
-        with st.expander("show report"):
-            st_profile_report(profile)
+    with st.expander("show report"):
+        st_profile_report(profile)
 
-        if profile is not None:
+    with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
+        profile_file_path = tmp_html.name
+        profile.to_file(profile_file_path)
+    
+    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+        pdf_file_path = tmp_pdf.name
+    
+    pdfkit.from_file(profile_file_path, pdf_file_path)
 
-            with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
-                profile_file_path = tmp_html.name
-                profile.to_file(profile_file_path)
-            
-            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
-                pdf_file_path = tmp_pdf.name
-            
-            pdfkit.from_file(profile_file_path, pdf_file_path)
+    with open(pdf_file_path, 'rb') as f:
+        st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True, type="primary")
 
-            with open(pdf_file_path, 'rb') as f:
-                st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True)
+    # clean up temporary files
+    os.remove(profile_file_path)
+    os.remove(pdf_file_path)
 
-            # clean up temporary files
-            os.remove(profile_file_path)
-            os.remove(pdf_file_path)
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
+
+st.subheader("Mitosheet")
+if filtered_df is not None and not filtered_df.empty:
+    new_dfs, code = spreadsheet(filtered_df)
+    if code:
+        st.markdown("##### Generated Code:")
+        st.write(code)
+else:
+    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
+
+st.subheader("Data Visualization Tool")
+if filtered_df is not None and not filtered_df.empty:
+    init_streamlit_comm()
+    @st.cache_resource
+    def get_pyg_html(df: pd.DataFrame) -> str:
+        html = get_streamlit_html(df, spec="./gw0.json", use_kernel_calc=True, debug=False)
+        return html
+
+    components.html(get_pyg_html(df), width=1300, height=1000, scrolling=True)
+else:
+    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
