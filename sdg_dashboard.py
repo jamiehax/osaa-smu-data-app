@@ -142,17 +142,6 @@ with col2:
 if df is not None:
     if not df.empty:
         st.dataframe(df)
-
-        csv = df.to_csv(index=False)
-        st.download_button(
-            label="download filtered data as a CSV file",
-            data=csv,
-            file_name='data.csv',
-            mime='text/csv',
-            disabled=(df is None),
-            type='primary',
-            use_container_width=True
-        )
     else:
         st.write("no data available for the selection")
 

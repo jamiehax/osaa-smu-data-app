@@ -123,40 +123,45 @@ else:
         st.error(f"Error retrieving the data. This is most likely due to blank indicator, country, or time values. Please ensure there are values for the indicator, country, and time range. \n\n Error: {e}")
         df = None
 
-# download
-if df is not None:
-    csv = df.to_csv(index=False)
-    st.download_button(
-        label="download filtered data as a CSV file",
-        data=csv,
-        file_name='data.csv',
-        mime='text/csv',
-        disabled=(df is None),
-        type='primary',
-        use_container_width=True
-    )
-
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 st.subheader("Explore Data")
 if df is not None:
+    df_melted = df.melt(id_vars=['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
+    df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
+    
     try:
-        df_melted = df.melt(id_vars=['Country or Area', 'Indicator', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
-        df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
-
-        fig = px.line(df_melted, 
-                    x='Year', 
-                    y='Value', 
-                    color='Country or Area', 
-                    symbol='Indicator',
-                    markers=True,
-                    labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Value': 'Value', 'Year': 'Year'},
-                    title="Time Series of Indicators by Country and Indicator")
+        fig = px.line(
+            df_melted, 
+            x='Year', 
+            y='Value', 
+            color='Country or Area', 
+            symbol='Indicator',
+            markers=True,
+            labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Value': 'Value', 'Year': 'Year'},
+            title="Time Series of Indicators by Country and Indicator"
+        )
 
         st.plotly_chart(fig)
     except Exception as e:
-        st.error(f"Error generating graph:\n\n{e}")
+        st.error(f"Error generating Time Series Graph:\n\n{e}")
+
+    try:
+        fig = px.choropleth(
+            df_melted,
+            locations='iso3',
+            color='Value',
+            hover_name='iso3',
+            color_continuous_scale='Viridis',
+            projection='natural earth',
+            title="Map of Indicator Value"
+        )
+
+        st.plotly_chart(fig)
+
+    except Exception as e:
+        st.error(f"Error generating Map Graph:\n\n{e}")
 
 else:
     st.write("data not available for the selected indicator(s), countries, and year(s).")
