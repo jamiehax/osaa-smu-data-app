@@ -1,5 +1,5 @@
 import streamlit as st
-from helper_functions import get_dataset_names, get_df, refresh_db
+from helper_functions import get_dataset_names, get_df
 from mitosheet.streamlit.v1 import spreadsheet
 import pandas as pd
 
@@ -19,13 +19,7 @@ st.write("Either search through existing datasets or upload your own dataset as 
 
 st.markdown("##### Search Datasets")
 dataset_names = get_dataset_names(st.session_state.db_path)
-
-col1, col2 = st.columns(2)
-with col1:
-    df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
-with col2:
-    if st.button("refresh database", use_container_width=True):
-        refresh_db(st.session_state.db_path)
+df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
 if df_name is not None:
     df = get_df(st.session_state.db_path, df_name)
