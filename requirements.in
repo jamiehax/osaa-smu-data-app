@@ -7,6 +7,6 @@ ydata-profiling
 streamlit-pandas-profiling
 wbgapi
 plotly
-langchain
+langchain-core
 langchain-community
 langchain-openai
