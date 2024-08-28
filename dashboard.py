@@ -12,11 +12,63 @@ import streamlit.components.v1 as components
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
 from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
-from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from operator import itemgetter
 from langchain_core.runnables import RunnablePassthrough
+import tiktoken
+from langchain_core.messages import BaseMessage, ToolMessage
+from typing import List
+
+
+def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    if session_id not in st.session_state.chat_history:
+        st.session_state.chat_history[session_id] = InMemoryChatMessageHistory()
+    return st.session_state.chat_history[session_id]
+
+def clear_chat_history(session_id):
+    st.session_state.chat_history[session_id].clear()
+    st.session_state.formatted_chat_history = {}
+
+def display_chat_history(session_id):
+    messages = st.session_state.formatted_chat_history.get(chat_session_id, None)
+    if messages is None:
+        st.session_state.formatted_chat_history[session_id] = []
+        intro_message = "Hi! I am a chatbot assistant trained to help you understand your data. Ask me questions about your currently selected dataset in natural language and I will answer them!"
+        st.chat_message("assistant").markdown(intro_message)
+        st.session_state.formatted_chat_history[session_id].append({"role": "assistant", "content": intro_message})
+    else:   
+        for message in messages:
+            st.chat_message(message["role"]).markdown(message["content"])
+
+
+def str_token_counter(text: str) -> int:
+    enc = tiktoken.get_encoding("o200k_base")
+    return len(enc.encode(text))
+
+def tiktoken_counter(messages: List[BaseMessage]) -> int:
+    num_tokens = 3 
+    tokens_per_message = 3
+    tokens_per_name = 1
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            role = "user"
+        elif isinstance(msg, AIMessage):
+            role = "assistant"
+        elif isinstance(msg, ToolMessage):
+            role = "tool"
+        elif isinstance(msg, SystemMessage):
+            role = "system"
+        else:
+            raise ValueError(f"Unsupported messages type {msg.__class__}")
+        num_tokens += (
+            tokens_per_message
+            + str_token_counter(role)
+            + str_token_counter(msg.content)
+        )
+        if msg.name:
+            num_tokens += tokens_per_name + str_token_counter(msg.name)
+    return num_tokens
 
 
 # create session states
@@ -24,48 +76,10 @@ if 'report' not in st.session_state:
     st.session_state.report = None
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
+if 'formatted_chat_history' not in st.session_state:
+    st.session_state.formatted_chat_history = {}
 
-# set up LancChain
-key = st.secrets['azure']
-llm = AzureChatOpenAI(
-    azure_deployment="gpt35osaa",
-    api_key=key,
-    azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-    openai_api_version="2024-05-01-preview"
-)
-
-store = {}
-def get_session_history(session_id: str) -> BaseChatMessageHistory:
-    if session_id not in store:
-        store[session_id] = ChatMessageHistory()
-    return store[session_id]
-
-trimmer = trim_messages(
-    max_tokens=65,
-    strategy="last",
-    token_counter=llm,
-    include_system=True,
-    allow_partial=False,
-    start_on="human",
-)
-
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are a helpful data analyst assistant. Answer the user's question about the following Pandas DataFrame: {dataframe}",
-        ),
-        MessagesPlaceholder(variable_name="history"),
-        ("human", "{input}"),
-    ]
-)
-
-chain = (
-    RunnablePassthrough.assign(messages=itemgetter("history") | trimmer)
-    | prompt
-    | llm
-)
-
+chat_session_id = 'test_id'
 
 # title and introduction
 st.title("OSAA SMU's Data Dashboard")
@@ -196,51 +210,77 @@ st.write("")
 st.subheader("Natural Language Queries")
 st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as python and SQL code.")
 
+key = st.secrets['azure']
+model = AzureChatOpenAI(
+    azure_deployment="gpt35osaa",
+    api_key=key,
+    azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
+    openai_api_version="2024-05-01-preview"
+)
+
+trimmer = trim_messages(
+    max_tokens=1000,
+    strategy="last",
+    token_counter=tiktoken_counter,
+    include_system=True,
+    allow_partial=False,
+    start_on="human",
+)
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are a helpful data analyst assistant. Answer the user's question about the following Pandas DataFrame: {dataframe}",
+        ),
+        MessagesPlaceholder(variable_name="messages"),
+    ]
+)
+
+chain = RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) | prompt | model
+
+config = {"configurable": {"session_id": chat_session_id}}
+
 with st.container(height=500):
+
     messages_container = st.container()
 
-    config = {"configurable": {"session_id": "abc1"}}
-    
-    # if not st.session_state.chat_history:
-    #     messages_container.chat_message(message["role"]).markdown("Hi! I am a chatbot assistant trained to help you understand your data. Ask me questions about your currently selected dataset in natural language and I will answer them!")
-    # else:
-    #     for message in st.session_state.chat_history:
-    #         chat_history = get_session_history('abc1')
-    #         st.write(chat_history)
-            # messages_container.chat_message(message["role"]).markdown(message["content"])
+    with messages_container:
+        display_chat_history(chat_session_id)
+
         
     if prompt := st.chat_input("ask about the data..."):
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
+
+        st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": prompt})
+
         messages_container.chat_message("user").markdown(prompt)
 
-        # get response
         df_string = filtered_df.to_string() if filtered_df is not None else "No DataFrame available"
 
+        # get reponse
         with_message_history = RunnableWithMessageHistory(
             chain,
             get_session_history,
-            input_messages_key="input",
-            history_messages_key="history",
+            input_messages_key="messages",
         )
-
-        response = with_message_history.invoke(
+        response_generator = with_message_history.stream(
             {
-                "input": [HumanMessage(content=prompt)],
+                "messages": [HumanMessage(content=prompt)],
                 "dataframe": df_string
             },
             config=config
         )
+        
+        with messages_container:
+            with st.chat_message("assistant"):
+                response = st.write_stream(response_generator)
 
-        messages_container.chat_message("assistant").markdown(response.content)
+        st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
 
-        # messages_container.st.write_stream(with_message_history.stream(
-        #     {"messages": [HumanMessage(content=prompt)], "dataframe": df_string}
-        #     config=config,
-        # ))
 
-    if st.button("clear chat history", type="primary", use_container_width=True):
-        st.session_state.chat_history = []
-        st.rerun()
+if st.button("clear chat history", type="primary", use_container_width=True):
+    clear_chat_history(chat_session_id)
+    st.rerun()
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
