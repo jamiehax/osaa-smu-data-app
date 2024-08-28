@@ -241,14 +241,13 @@ chain = RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) | 
 
 config = {"configurable": {"session_id": chat_session_id}}
 
-with st.container(height=500):
 
-    messages_container = st.container()
+messages_container = st.container(height=500)
+with messages_container:
+    display_chat_history(chat_session_id)
 
-    with messages_container:
-        display_chat_history(chat_session_id)
 
-        
+with st.container():
     if prompt := st.chat_input("ask about the data..."):
 
         st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": prompt})
@@ -278,9 +277,9 @@ with st.container(height=500):
         st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
 
 
-if st.button("clear chat history", type="primary", use_container_width=True):
-    clear_chat_history(chat_session_id)
-    st.rerun()
+    if st.button("clear chat history", type="primary", use_container_width=True):
+        clear_chat_history(chat_session_id)
+        st.rerun()
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
