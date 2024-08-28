@@ -26,8 +26,7 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
 
 # set up LancChain
-# key = st.secrets['azure']
-key = "a7e761d830474f9da547e0bcadc0658a"
+key = st.secrets['azure']
 llm = AzureChatOpenAI(
     azure_deployment="gpt35osaa",
     api_key=key,
