@@ -143,20 +143,22 @@ with col2:
 
             # break if no data
             if not data.get('data', []):
-                st.write(data)
                 break
 
             if not isinstance(data, Exception):
-                for entry in data["data"]:
-                    extracted_data.append({
-                        "Indicator": entry["indicator"][0],
-                        "Value": entry["value"],
-                        "Year": entry["timePeriodStart"],
-                        "m49": entry["geoAreaCode"],
-                        "Country": entry["geoAreaName"],
-                        "Series": entry["series"],
-                        "Series Description": entry["seriesDescription"]
-                    })
+                if len(data['data']) < 1:
+                    st.write("no data returned for the selected countries, indicators, and years.")
+                else:
+                    for entry in data["data"]:
+                        extracted_data.append({
+                            "Indicator": entry["indicator"][0],
+                            "Value": entry["value"],
+                            "Year": entry["timePeriodStart"],
+                            "m49": entry["geoAreaCode"],
+                            "Country": entry["geoAreaName"],
+                            "Series": entry["series"],
+                            "Series Description": entry["seriesDescription"]
+                        })
 
             else:
                 st.error(f"An error occurred while getting the data: \n\n {data}.")
@@ -182,7 +184,6 @@ with col2:
         else:
             df = None
 
-
     else:
         df = None
 
@@ -204,7 +205,7 @@ if df is not None:
                     x='Year', 
                     y='Value', 
                     color='Country or Area', 
-                    symbol='Indicator',
+                    symbol='Series Description',
                     markers=True,
                     labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Value': 'Value', 'Year': 'Year'},
                     title="Time Series of Indicators by Country and Indicator")
@@ -212,6 +213,33 @@ if df is not None:
         st.plotly_chart(fig)
     except Exception as e:
         st.error(f"Error generating graph:\n\n{e}")
+
+    @st.fragment
+    def show_map():
+        try:           
+            st.markdown("###### Choose an Series to show on the map")
+            series_descriptions = df['Series Description'].unique()
+            selected_series= st.selectbox("select indicator to show on map:", series_descriptions, label_visibility="collapsed")
+            series_df = df[(df['Series Description'] == selected_series)]
+            most_recent_year = series_df['Year'].max()
+            map_df = series_df[series_df['Year'] == most_recent_year]
+
+            fig = px.choropleth(
+                map_df,
+                locations='iso3',
+                color='Value',
+                hover_name='Country or Area',
+                color_continuous_scale='Viridis',
+                projection='natural earth',
+                title="Map of Indicator Value"
+            )
+
+            st.plotly_chart(fig)
+
+        except Exception as e:
+            st.error(f"Error generating Map Graph:\n\n{e}")
+
+    show_map()
 
 else:
     st.write("data not available for the selected indicator(s), countries, and year(s).")
