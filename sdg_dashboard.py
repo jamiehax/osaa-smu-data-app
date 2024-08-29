@@ -12,7 +12,8 @@ def get_data(url):
     try:
         data = requests.get(url).json()
     except Exception as e:
-        data = None
+        st.cache_data.clear()
+        data = e
 
     return data
 
@@ -35,7 +36,7 @@ st.write("")
 st.markdown("### Explore Sustainable Development Goals")
 goals_url = "v1/sdg/Goal/List?includechildren=false"
 goals_data = get_data(f"{BASE_URL}/{goals_url}")
-if goals_data is not None:
+if not isinstance(goals_data, Exception):
     selected_goal_title = st.selectbox("select goal to explore", [f"{goal['code']}. {goal['title']}" for goal in goals_data], label_visibility="collapsed")
     selected_goal_code = next(goal['code'] for goal in goals_data if f"{goal['code']}. {goal['title']}" == selected_goal_title)
     selected_goal_data = next(goal for goal in goals_data if f"{goal['code']}. {goal['title']}" == selected_goal_title)
@@ -45,7 +46,7 @@ if goals_data is not None:
     st.markdown(f"##### Available Indicators for *{selected_goal_title}*")
     indicator_url = "v1/sdg/Indicator/List"
     indicator_data = get_data(f"{BASE_URL}/{indicator_url}")
-    if indicator_data is not None:
+    if not isinstance(indicator_data, Exception):
         for i, indicator in enumerate(indicator_data):           
             if indicator['goal'] == selected_goal_code:
                 series_codes = [series_entry['code'] for series_entry in indicator['series']]
@@ -55,22 +56,65 @@ if goals_data is not None:
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-st.markdown("### Select Data")
-
-st.markdown("##### Select Indicators")
+st.markdown("#### Select Indicators")
 indicators = [f"{indicator['code']}: {indicator['description']}" for indicator in indicator_data]
 if indicator_data is not None:
     selected_indicator_names = st.multiselect("select indicators", indicators, label_visibility="collapsed")
     selected_indicator_codes = [entry.split(': ')[0] for entry in selected_indicator_names]
 
-st.markdown("##### Select Countries")
+st.markdown("#### Select Countries")
 country_code_url = "v1/sdg/GeoArea/List"
 country_code_data = get_data(f"{BASE_URL}/{country_code_url}")
-if country_code_data is not None:
-    selected_country_code_names = st.multiselect("select countries", [f"{country_code['geoAreaCode']} - {country_code['geoAreaName']}" for country_code in country_code_data], label_visibility="collapsed")
-    selected_country_codes = [entry.split(' - ')[0] for entry in selected_country_code_names]
 
-st.markdown("##### Select Time Range")
+# if not isinstance(country_code_data, Exception):
+#     selected_country_code_names = st.multiselect("select countries", [f"{country_code['geoAreaCode']} - {country_code['geoAreaName']}" for country_code in country_code_data], label_visibility="collapsed")
+#     selected_country_codes = [entry.split(' - ')[0] for entry in selected_country_code_names]
+#     st.write(selected_country_codes)
+
+if not isinstance(country_code_data, Exception):
+
+    regions = iso3_reference_df['Region Name'].dropna().unique()
+
+    selected_regions = st.multiselect(
+        "select regions:",
+        ['SELECT ALL'] + list(regions),
+        label_visibility="collapsed",
+        placeholder="select by region"
+    )
+
+    if 'SELECT ALL' in selected_regions:
+        selected_regions = [r for r in regions if r != 'SELECT ALL']
+    else:
+        selected_regions = [r for r in selected_regions if r != 'SELECT ALL']
+
+    def get_countries_by_region(region):
+        return iso3_reference_df[iso3_reference_df['Region Name'] == region]['m49'].tolist()
+
+    selected_countries = []
+    for region in selected_regions:
+        selected_countries.extend(get_countries_by_region(region))
+
+    # remove duplicates
+    selected_countries = list(set(selected_countries))
+    selected_country_names = iso3_reference_df[iso3_reference_df['m49'].isin(selected_countries)]['Country or Area'].tolist()
+    m49_to_name = dict(zip(iso3_reference_df['m49'], iso3_reference_df['Country or Area']))
+    selected_countries_formatted = [f"{country_code} - {m49_to_name[country_code]}" for country_code in selected_countries]
+
+    available_countries = list(zip(iso3_reference_df['m49'].tolist(), iso3_reference_df['Country or Area'].tolist()))
+    available_countries_formatted = [f"{country[0]} - {country[1]}" for country in available_countries]
+
+    selected_countries = st.multiselect(
+        "Available countries:",
+        available_countries_formatted,
+        default=selected_countries_formatted,
+        label_visibility="collapsed",
+        placeholder="select by country"
+    )
+
+    selected_country_codes = [entry.split(' - ')[0] for entry in selected_countries]
+
+
+st.markdown("#### Select Time Range")
 selected_years = st.slider( "Select a range of years:", min_value=1963, max_value=2023, value=(1963, 2023), step=1, label_visibility="collapsed")
 
 # get data
@@ -99,9 +143,10 @@ with col2:
 
             # break if no data
             if not data.get('data', []):
+                st.write(data)
                 break
 
-            if data is not None:
+            if not isinstance(data, Exception):
                 for entry in data["data"]:
                     extracted_data.append({
                         "Indicator": entry["indicator"][0],
@@ -112,6 +157,9 @@ with col2:
                         "Series": entry["series"],
                         "Series Description": entry["seriesDescription"]
                     })
+
+            else:
+                st.error(f"An error occurred while getting the data: \n\n {data}.")
 
             if len(data.get('data', [])) < page_size:
                 break
