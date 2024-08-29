@@ -27,7 +27,8 @@ def get_session_history(session_id: str) -> BaseChatMessageHistory:
     return st.session_state.chat_history[session_id]
 
 def clear_chat_history(session_id):
-    st.session_state.chat_history[session_id].clear()
+    if session_id in st.session_state.chat_history:
+        st.session_state.chat_history[session_id].clear()
     st.session_state.formatted_chat_history = {}
 
 def display_chat_history(session_id):
@@ -208,19 +209,18 @@ st.write("")
 
 # natural language dataset exploration
 st.subheader("Natural Language Queries")
-st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as python and SQL code.")
+st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
 
-key = st.secrets['azure']
 model = AzureChatOpenAI(
     azure_deployment="gpt35osaa",
-    api_key=key,
+    api_key=st.secrets['azure'],
     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     openai_api_version="2024-05-01-preview"
 )
 
 trimmer = trim_messages(
     max_tokens=1000,
-    strategy="last",
+    strategy="first",
     token_counter=tiktoken_counter,
     include_system=True,
     allow_partial=False,
@@ -256,6 +256,9 @@ with st.container():
 
         df_string = filtered_df.to_string() if filtered_df is not None else "No DataFrame available"
 
+        num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
+        st.write(f"num tokens for dataset (prompts are trimmed to last 1000 tokens): {num_tokens}")
+
         # get reponse
         with_message_history = RunnableWithMessageHistory(
             chain,
@@ -272,7 +275,11 @@ with st.container():
         
         with messages_container:
             with st.chat_message("assistant"):
-                response = st.write_stream(response_generator)
+                try:
+                    response = st.write_stream(response_generator)
+                except Exception as e:
+                    response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
+                    st.write(response)
 
         st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
 
