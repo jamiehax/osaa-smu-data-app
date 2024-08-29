@@ -237,7 +237,7 @@ prompt = ChatPromptTemplate.from_messages(
         (
             "human",
             "Here is the Pandas DataFrame: {dataframe}."
-        )
+        ),
         (
             "human",
             "My question is: {prompt}."
