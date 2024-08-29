@@ -219,7 +219,7 @@ model = AzureChatOpenAI(
 )
 
 trimmer = trim_messages(
-    max_tokens=1000,
+    max_tokens=2000,
     strategy="first",
     token_counter=tiktoken_counter,
     include_system=True,
@@ -231,9 +231,17 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a helpful data analyst assistant. Answer the user's question about the following Pandas DataFrame: {dataframe}",
+            "You are a helpful data analyst assistant. Answer the user's question about their dataset.",
         ),
         MessagesPlaceholder(variable_name="messages"),
+        (
+            "human",
+            "Here is the Pandas DataFrame: {dataframe}."
+        )
+        (
+            "human",
+            "My question is: {prompt}."
+        )
     ]
 )
 
@@ -256,8 +264,8 @@ with st.container():
 
         df_string = filtered_df.to_string() if filtered_df is not None else "No DataFrame available"
 
-        num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
-        st.write(f"num tokens for dataset (prompts are trimmed to last 1000 tokens): {num_tokens}")
+        # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
+        # st.write(f"num tokens for dataset (prompts are trimmed to last 1000 tokens): {num_tokens}")
 
         # get reponse
         with_message_history = RunnableWithMessageHistory(
@@ -268,7 +276,8 @@ with st.container():
         response_generator = with_message_history.stream(
             {
                 "messages": [HumanMessage(content=prompt)],
-                "dataframe": df_string
+                "dataframe": df_string,
+                "prompt": prompt
             },
             config=config
         )
