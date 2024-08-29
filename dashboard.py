@@ -219,8 +219,8 @@ model = AzureChatOpenAI(
 )
 
 trimmer = trim_messages(
-    max_tokens=2000,
-    strategy="first",
+    max_tokens=1000,
+    strategy="last",
     token_counter=tiktoken_counter,
     include_system=True,
     allow_partial=False,
