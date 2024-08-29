@@ -7,19 +7,39 @@ import plotly.express as px
 # cached functions for retreiving metadata
 @st.cache_data
 def get_databases():
-    return [(database["id"], database["name"]) for database in wb.source.list()]
+    try:
+        data = [(database["id"], database["name"]) for database in wb.source.list()]
+    except Exception as e:
+        data = None
+    
+    return data
 
 @st.cache_data
 def get_indicators():
-    return list(wb.series.list())
+    try:
+        data = list(wb.series.list())
+    except Exception as e:
+        data = None
+    
+    return data
 
 @st.cache_data
 def get_query_result(search_query, db):
-    return list(wb.series.list(q=search_query))
+    try:
+        data = list(wb.series.list(q=search_query))
+    except Exception as e:
+        data = None
+    
+    return data
 
 @st.cache_data
 def get_countries():
-    return list(wb.economy.list())
+    try:
+        data = list(wb.economy.list())
+    except Exception as e:
+        data = None
+    
+    return data
     
 
 
@@ -162,15 +182,15 @@ if df is not None:
     @st.fragment
     def show_map():
         try:
-            indicator_descriptions = df_melted['Indicator Description'].unique()
-            most_recent_year = df_melted['Year'].max()
-            df_melted_mry = df_melted[df_melted['Year'] == most_recent_year]
-            
             st.markdown("###### Choose an Indicator to show on the map")
+            indicator_descriptions = df_melted['Indicator Description'].unique()
             selected_indicator = st.selectbox("select indicator to show on map:", indicator_descriptions, label_visibility="collapsed")
             indicator_description_code_map = {d['value']: d['id'] for d in query_result}
             selected_code = indicator_description_code_map[selected_indicator]
-            map_df = df_melted_mry[(df_melted_mry['Indicator'] == selected_code)]
+            indicator_df = df_melted[(df_melted['Indicator'] == selected_code)]
+
+            most_recent_year = indicator_df['Year'].max()
+            map_df = indicator_df[indicator_df['Year'] == most_recent_year]
 
             fig = px.choropleth(
                 map_df,
