@@ -168,9 +168,9 @@ if df is not None:
             x='Year', 
             y='Value', 
             color='Country or Area', 
-            symbol='Indicator Description',
+            symbol='Indicator',
             markers=True,
-            labels={'Country or Area': 'Country', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
+            labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
             title="Time Series of Indicators by Country and Indicator"
         )
 

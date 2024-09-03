@@ -201,14 +201,16 @@ st.write("")
 st.subheader("Explore Data")
 if df is not None:
     try:
-        fig = px.line(df, 
-                    x='Year', 
-                    y='Value', 
-                    color='Country or Area', 
-                    symbol='Series Description',
-                    markers=True,
-                    labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Value': 'Value', 'Year': 'Year'},
-                    title="Time Series of Indicators by Country and Indicator")
+        fig = px.line(
+            df, 
+            x='Year', 
+            y='Value', 
+            color='Country or Area', 
+            symbol='Series',
+            markers=True,
+            labels={'Country or Area': 'Country', 'Series': 'Series', 'Series Description': 'Series Description', 'Value': 'Value', 'Year': 'Year'},
+            title="Time Series of Indicators by Country and Indicator"
+        )
 
         st.plotly_chart(fig)
     except Exception as e:
