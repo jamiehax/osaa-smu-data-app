@@ -42,7 +42,6 @@ def display_chat_history(session_id):
         for message in messages:
             st.chat_message(message["role"]).markdown(message["content"])
 
-
 def str_token_counter(text: str) -> int:
     enc = tiktoken.get_encoding("o200k_base")
     return len(enc.encode(text))
@@ -71,6 +70,24 @@ def tiktoken_counter(messages: List[BaseMessage]) -> int:
             num_tokens += tokens_per_name + str_token_counter(msg.name)
     return num_tokens
 
+def summarize_dataframe(df, max_rows=5, max_categories=25):
+    summary = df.describe().to_string()
+    preview = df.head(max_rows).to_string()
+
+    categorical_counts = []
+    non_numeric_columns = df.select_dtypes(exclude='number').columns
+    for col in non_numeric_columns:
+        counts = df[col].value_counts().nlargest(max_categories).to_string()
+        categorical_counts.append(f"Column '{col}' top {max_categories} categories: {counts}")
+
+    categorical_unique = []
+    non_numeric_columns = df.select_dtypes(exclude='number').columns
+    for col in non_numeric_columns:
+        num_unique = df[col].nunique()
+        num_missing = df[col].isna().sum()
+        categorical_unique.append(f"Column '{col}': {num_unique} unique values and {num_missing} missing values")
+
+    return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
 
 # create session states
 if 'report' not in st.session_state:
@@ -81,6 +98,7 @@ if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 
 chat_session_id = 'test_id'
+CONTEXT_WINDOW = 8192
 
 # title and introduction
 st.title("OSAA SMU's Data Dashboard")
@@ -231,12 +249,12 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a helpful data analyst assistant. Answer the user's question about their dataset.",
+            "You are a helpful data analyst assistant. Answer the user's question about their data. You will not have access to the entire dataset, instead you will get the first 5 rows of the data, as well as summaries of the columns. Use this to infer the answers to the users questions.",
         ),
         MessagesPlaceholder(variable_name="messages"),
         (
             "human",
-            "Here is the Pandas DataFrame: {dataframe}."
+            "Here is the Pandas DataFrame summary: {dataframe}."
         ),
         (
             "human",
@@ -262,7 +280,10 @@ with st.container():
 
         messages_container.chat_message("user").markdown(prompt)
 
-        df_string = filtered_df.to_string() if filtered_df is not None else "No DataFrame available"
+        if filtered_df is not None:
+            df_string = summarize_dataframe(filtered_df)
+        else:
+            df_string = "There is no DataFrame available."
 
         # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
         # st.write(f"num tokens for dataset (prompts are trimmed to last 1000 tokens): {num_tokens}")
@@ -296,7 +317,6 @@ with st.container():
     if st.button("clear chat history", type="primary", use_container_width=True):
         clear_chat_history(chat_session_id)
         st.rerun()
-
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
