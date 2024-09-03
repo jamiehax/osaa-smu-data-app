@@ -31,25 +31,6 @@ def setup_db():
             )
         """)
 
-        # import all the CSV files into the DuckDB
-        if os.path.exists(CSV_DIR):
-            csv_files = [f for f in os.listdir(CSV_DIR) if f.endswith('.csv')]
-            for idx, csv_file in enumerate(csv_files):
-
-                # turn CSV's into DataFrames
-                df = pd.read_csv(os.path.join(CSV_DIR, csv_file))
-
-                # import dataframe into DuckDB with the filename as the table name
-                table_name = os.path.splitext(csv_file)[0]
-
-                # check to see if it exists already
-                conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-                conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
-                
-                # Add an entry to the metadata table
-                conn.execute("INSERT INTO metadata (id, name) VALUES (?, ?)", (idx, table_name))
-
-
         # create a test dataset
         countries = ["Nigeria", "Kenya", "South Africa", "Ghana", "Egypt", "Morocco", "Ethiopia", "Tanzania", "Uganda", "Algeria"]
         years = list(range(2000, 2024))
@@ -74,7 +55,26 @@ def setup_db():
         # add the test dataset to DuckDB
         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
         conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df_test")
-        conn.execute("INSERT INTO metadata (id, name) VALUES (?, ?)", (len(csv_files), table_name))
+        conn.execute("INSERT INTO metadata (id, name) VALUES (?, ?)", (0, table_name))
+
+
+        # import all the CSV files into the DuckDB
+        if os.path.exists(CSV_DIR):
+            csv_files = [f for f in os.listdir(CSV_DIR) if f.endswith('.csv')]
+            for idx, csv_file in enumerate(csv_files):
+
+                # turn CSV's into DataFrames
+                df = pd.read_csv(os.path.join(CSV_DIR, csv_file))
+
+                # import dataframe into DuckDB with the filename as the table name
+                table_name = os.path.splitext(csv_file)[0]
+
+                # check to see if it exists already
+                conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+                conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
+                
+                # Add an entry to the metadata table
+                conn.execute("INSERT INTO metadata (id, name) VALUES (?, ?)", (idx+1, table_name))
 
         # close the connection
         conn.close()
