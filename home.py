@@ -16,6 +16,11 @@ st.markdown("#### SDG Data Dashboard")
 st.markdown("The SDG Dashboard allows for exploratory data analysis of the United Nations Sustainable Development Goals DataBase. Explore the 17 sustainable development goals and their corresponding indicators, and select and download data by indicator, country, and time range. Create automatic interactive time series graphs on the selected data.")
 st.page_link("sdg_dashboard.py", label="SDG Dashboard", icon=":material/show_chart:", use_container_width=True)
 
+st.markdown("#### Contradictory Analysis Tool")
+st.markdown("The Contradictory Analysis Tool allows you to check if your analysis contradicts any previous analysis in OSAA's publications. This tool uses large language models with retrieval augmented generation and therefore may provide wrong answers.")
+st.page_link("check_analysis.py", label="Contradictory Analysis Tool", icon=":material/check:", use_container_width=True)
+
+
 # st.markdown("#### Data Sheet")
 # st.markdown("The Data Sheet allows for the automation of excel sheet processes and analysis of an uploaded dataset with *Mitosheet*.")
 # st.page_link("datasheet.py", label="Data Sheet", icon=":material/table_chart:", use_container_width=True)
