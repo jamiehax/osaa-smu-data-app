@@ -1,5 +1,4 @@
 
-import os
 import streamlit as st
 import duckdb
 from langchain_openai import AzureChatOpenAI
@@ -64,7 +63,7 @@ def make_vectorstore():
 
 @st.cache_resource
 def get_splits():
-    doc_path = "/Users/jamiehackney/Documents/professional/un/projects/flagship report shortened.pdf"
+    doc_path = "flagship report shortened.pdf"
     loader = PyPDFLoader(doc_path)
     docs = loader.load()
 
