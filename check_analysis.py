@@ -12,7 +12,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 # os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# os.environ["LANGCHAIN_API_KEY"] = "..."
+# os.environ["LANGCHAIN_API_KEY"] = st.secrets['langsmith']
 # os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 # os.environ["LANGCHAIN_PROJECT"] = "osaa-smu-contradictory-analysis"
 
@@ -126,23 +126,26 @@ messages_container = st.container()
 with messages_container:
     display_chat_history(chat_session_id)
 
-if st.button("clear chat history", type="secondary", use_container_width=True):
-    clear_chat_history(chat_session_id)
-    st.rerun()
+button_container = st.container()
 
-if analysis := st.chat_input("provide some analysis..."):
+with button_container:
+    if analysis := st.chat_input("provide some analysis..."):
 
-    st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": analysis})
-    messages_container.chat_message("user").markdown(analysis)
+        st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": analysis})
+        messages_container.chat_message("user").markdown(analysis)
 
-    response_generator = chain.stream(analysis)
+        response_generator = chain.stream(analysis)
 
-    with messages_container:
-        with st.chat_message("assistant"):
-            try:
-                response = st.write_stream(response_generator)
-            except Exception as e:
-                response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
-                st.write(response)
+        with messages_container:
+            with st.chat_message("assistant"):
+                try:
+                    response = st.write_stream(response_generator)
+                except Exception as e:
+                    response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
+                    st.write(response)
 
-    st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
+        st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
+
+    if st.button("clear chat history", type="secondary", use_container_width=True):
+        clear_chat_history(chat_session_id)
+        st.rerun()
