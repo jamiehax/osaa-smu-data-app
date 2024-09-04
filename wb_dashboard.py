@@ -10,7 +10,7 @@ def get_databases():
     try:
         data = [(database["id"], database["name"]) for database in wb.source.list()]
     except Exception as e:
-        data = None
+        data = e
     
     return data
 
@@ -19,7 +19,7 @@ def get_indicators():
     try:
         data = list(wb.series.list())
     except Exception as e:
-        data = None
+        data = e
     
     return data
 
@@ -28,7 +28,7 @@ def get_query_result(search_query, db):
     try:
         data = list(wb.series.list(q=search_query))
     except Exception as e:
-        data = None
+        data = e
     
     return data
 
@@ -37,7 +37,7 @@ def get_countries():
     try:
         data = list(wb.economy.list())
     except Exception as e:
-        data = None
+        data = e
     
     return data
     
@@ -56,9 +56,12 @@ iso3_reference_df = pd.read_csv('iso3_country_reference.csv')
 
 st.markdown("#### Select Database:")
 databases = get_databases()
-selected_db_name = st.selectbox("available databases:", [database[1] for database in databases], label_visibility="collapsed")
-selected_db = next(database[0] for database in databases if database[1] == selected_db_name)
-if selected_db: wb.db = selected_db
+if isinstance(databases, Exception): 
+    st.write(f"error getting databases info: \n{databases}")
+else:
+    selected_db_name = st.selectbox("available databases:", [database[1] for database in databases], label_visibility="collapsed")
+    selected_db = next(database[0] for database in databases if database[1] == selected_db_name)
+    if selected_db: wb.db = selected_db
 
 st.markdown("#### Select Indicators:")
 st.write("NOTE: keyword queries ignore the parenthetical part of the indicator name. For example, 'GDP' will not match 'Gross domestic savings (% of GDP)'. To search the parenthetical part too, add an exclamation point like this: '!GDP'")
@@ -68,52 +71,57 @@ search_query = st.text_input(
         placeholder="enter keywords to filter indicators"
     )
 query_result = get_query_result(search_query, selected_db)
-
-formatted_indicators = [f"{indicator['id']} - {indicator['value']}" for indicator in query_result]
-selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed", placeholder="select indicator(s)")
-selected_indicators = [indicator.split(' - ')[0] for indicator in selected_indicator_names]
+if isinstance(query_result, Exception): 
+    st.write(f"error getting query result info: \n{query_result}")
+else:
+    formatted_indicators = [f"{indicator['id']} - {indicator['value']}" for indicator in query_result]
+    selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed", placeholder="select indicator(s)")
+    selected_indicators = [indicator.split(' - ')[0] for indicator in selected_indicator_names]
 
 st.markdown("#### Select Countries:")
 
 countries = get_countries()
-regions = iso3_reference_df['Region Name'].dropna().unique()
-
-selected_regions = st.multiselect(
-    "select regions:",
-    ['SELECT ALL'] + list(regions),
-    label_visibility="collapsed",
-    placeholder="select by region"
-)
-
-if 'SELECT ALL' in selected_regions:
-    selected_regions = [r for r in regions if r != 'SELECT ALL']
+if isinstance(countries, Exception): 
+    st.write(f"error getting country info: \n{countries}")
 else:
-    selected_regions = [r for r in selected_regions if r != 'SELECT ALL']
+    regions = iso3_reference_df['Region Name'].dropna().unique()
 
-def get_countries_by_region(region):
-    return iso3_reference_df[iso3_reference_df['Region Name'] == region]['iso3'].tolist()
+    selected_regions = st.multiselect(
+        "select regions:",
+        ['SELECT ALL'] + list(regions),
+        label_visibility="collapsed",
+        placeholder="select by region"
+    )
 
-selected_countries = []
-for region in selected_regions:
-    selected_countries.extend(get_countries_by_region(region))
+    if 'SELECT ALL' in selected_regions:
+        selected_regions = [r for r in regions if r != 'SELECT ALL']
+    else:
+        selected_regions = [r for r in selected_regions if r != 'SELECT ALL']
 
-# remove duplicates
-selected_countries = list(set(selected_countries))
-selected_country_names = iso3_reference_df[iso3_reference_df['iso3'].isin(selected_countries)]['Country or Area'].tolist()
-iso3_to_name = dict(zip(iso3_reference_df['iso3'], iso3_reference_df['Country or Area']))
-selected_countries_formatted = [f"{country_code} - {iso3_to_name[country_code]}" for country_code in selected_countries]
+    def get_countries_by_region(region):
+        return iso3_reference_df[iso3_reference_df['Region Name'] == region]['iso3'].tolist()
 
-available_countries = list(zip(iso3_reference_df['iso3'].tolist(), iso3_reference_df['Country or Area'].tolist()))
-available_countries_formatted = [f"{country[0]} - {country[1]}" for country in available_countries]
+    selected_countries = []
+    for region in selected_regions:
+        selected_countries.extend(get_countries_by_region(region))
 
-selected_countries = st.multiselect(
-    "Available countries:",
-    available_countries_formatted,
-    default=selected_countries_formatted,
-    label_visibility="collapsed",
-    placeholder="select by country"
-)
-selected_iso3_codes = [entry.split(' - ')[0] for entry in selected_countries]
+    # remove duplicates
+    selected_countries = list(set(selected_countries))
+    selected_country_names = iso3_reference_df[iso3_reference_df['iso3'].isin(selected_countries)]['Country or Area'].tolist()
+    iso3_to_name = dict(zip(iso3_reference_df['iso3'], iso3_reference_df['Country or Area']))
+    selected_countries_formatted = [f"{country_code} - {iso3_to_name[country_code]}" for country_code in selected_countries]
+
+    available_countries = list(zip(iso3_reference_df['iso3'].tolist(), iso3_reference_df['Country or Area'].tolist()))
+    available_countries_formatted = [f"{country[0]} - {country[1]}" for country in available_countries]
+
+    selected_countries = st.multiselect(
+        "Available countries:",
+        available_countries_formatted,
+        default=selected_countries_formatted,
+        label_visibility="collapsed",
+        placeholder="select by country"
+    )
+    selected_iso3_codes = [entry.split(' - ')[0] for entry in selected_countries]
 
 st.markdown("#### Select Time Range")
 
