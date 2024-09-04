@@ -32,7 +32,7 @@ def clear_chat_history(session_id):
     st.session_state.formatted_chat_history = {}
 
 def display_chat_history(session_id):
-    messages = st.session_state.formatted_chat_history.get(chat_session_id, None)
+    messages = st.session_state.formatted_chat_history.get(session_id, None)
     if messages is None:
         st.session_state.formatted_chat_history[session_id] = []
         intro_message = "Hi! I am a chatbot assistant trained to help you understand your data. Ask me questions about your currently selected dataset in natural language and I will answer them!"
