@@ -423,7 +423,7 @@ prometheus-client==0.20.0
     #   notebook
 prompt-toolkit==3.0.47
     # via ipython
-protobuf==5.27.3
+protobuf<=3.20.3 # was 5.28.0
     # via streamlit
 psutil==6.0.0
     # via
@@ -462,6 +462,8 @@ pygwalker==0.3.8
     # via -r requirements.in
 pyparsing==3.1.2
     # via matplotlib
+pypdf==4.3.1
+    # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via
     #   analytics-python
@@ -633,6 +635,7 @@ typing-extensions==4.12.2
     #   pydantic
     #   pydantic-core
     #   pygwalker
+    #   pypdf
     #   sqlalchemy
     #   streamlit
     #   typeguard

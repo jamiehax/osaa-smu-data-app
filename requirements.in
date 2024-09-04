@@ -10,3 +10,4 @@ plotly
 langchain-core
 langchain-community
 langchain-openai
+pypdf
