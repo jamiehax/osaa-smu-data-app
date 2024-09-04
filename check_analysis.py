@@ -98,7 +98,7 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are an assistant. Your task is to determine whether the provided analysis contradicts the context. If the analysis contradicts the context, clearly state that there is a contradiction. If there is no contradiction, state that there is no contradiction. If you are unsure, state that you are unsure."
+            "You are an assistant. Your task is to determine whether the provided analysis contradicts any context from our existing publications. If the analysis contradicts any context from our existing publications, clearly state that there is a contradiction. If there is no contradiction, state that there is no contradiction. If you are unsure, state that you are unsure."
         ),
         (
             "human",
@@ -106,11 +106,11 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Context: {context}."
+            "Existing Publication Context: {context}."
         ),
         (
             "system",
-            "Based on the analysis and the context, does the analysis contradict the context? Explain your reasoning and provide quotes demonstrating your reasoning if possible."
+            "Based on the Analysis and the Existing Publication Context, does the analysis contradict anything in the existing publications? Explain your reasoning and provide quotes demonstrating your reasoning if possible."
         )
     ]
 )
