@@ -75,8 +75,8 @@ def setup_db():
                     "Forest Land (km2)": int(forest_land)
                 })
 
-        # Create the DataFrame
         df_test = pd.DataFrame(data)
+        table_name = 'test_dataset'
 
         # add the test dataset to DuckDB
         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
