@@ -257,11 +257,11 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 
-st.subheader("Mitosheet")
-if df is not None and not df.empty:
-    new_dfs, code = spreadsheet(df)
-    if code:
-        st.markdown("##### Generated Code:")
-        st.write(code)
-else:
-    st.write("data not available for the selected indicator(s), countries, and year(s).")
+# st.subheader("Mitosheet")
+# if df is not None and not df.empty:
+#     new_dfs, code = spreadsheet(df)
+#     if code:
+#         st.markdown("##### Generated Code:")
+#         st.write(code)
+# else:
+#     st.write("data not available for the selected indicator(s), countries, and year(s).")
