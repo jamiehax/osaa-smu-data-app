@@ -52,7 +52,7 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 # read in iso3 code reference df
-iso3_reference_df = pd.read_csv('iso3_country_reference.csv')
+iso3_reference_df = pd.read_csv('content/iso3_country_reference.csv')
 
 st.markdown("#### Select Database:")
 databases = get_databases()
@@ -197,8 +197,11 @@ if df is not None:
             selected_code = indicator_description_code_map[selected_indicator]
             indicator_df = df_melted[(df_melted['Indicator'] == selected_code)]
 
-            most_recent_year = indicator_df['Year'].max()
-            map_df = indicator_df[indicator_df['Year'] == most_recent_year]
+            most_recent_year_with_value = indicator_df.dropna(subset=['Value'])
+            most_recent_year = most_recent_year_with_value['Year'].max()
+            map_df = most_recent_year_with_value[most_recent_year_with_value['Year'] == most_recent_year]
+
+            st.write(map_df)
 
             fig = px.choropleth(
                 map_df,
