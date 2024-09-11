@@ -1,8 +1,17 @@
 import streamlit as st
 from helper_functions import refresh_db
 
-st.title("OSAA SMU's Data App")
-st.markdown("Welcome to the Office of the Speical Advisor to Africa's Strategic Management Unit's Data App. Use the sidebar to the left or the page links below to navigate between the data products. ")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.image("content/OSAA-Data-logo.svg")
+
+
+st.title("SMU's Data App")
+st.markdown("Welcome to the Office of the Speical Advisor to Africa's Strategic Management Unit's Data App. Use the sidebar to the left or the page links below to navigate between the data products.")
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
 
 st.markdown("#### Data Dashboard")
 st.markdown("The Data Dashboard allows users to upload a dataset and get quick access to summary statistics about it, as well as a detailed report with *YData Profiling*. Use the AI chatbot to understand the dataset with natural language questions.")
