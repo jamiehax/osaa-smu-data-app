@@ -1,3 +1,0 @@
-data filter=lfs diff=lfs merge=lfs -text
-data/FSI_2019_2023_without_Pvot.csv filter=lfs diff=lfs merge=lfs -text
-data/Africa_1997_2024_Jul26.csv filter=lfs diff=lfs merge=lfs -text
