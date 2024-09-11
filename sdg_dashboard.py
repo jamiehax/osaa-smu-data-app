@@ -22,7 +22,7 @@ def get_data(url):
 BASE_URL = "https://unstats.un.org/sdgs/UNSDGAPIV5"
 
 # read in iso3 code reference df
-iso3_reference_df = pd.read_csv('iso3_country_reference.csv')
+iso3_reference_df = pd.read_csv('content/iso3_country_reference.csv')
 iso3_reference_df['m49'] = iso3_reference_df['m49'].astype(str)
 
 # title and introduction
@@ -223,7 +223,11 @@ if df is not None:
             series_descriptions = df['Series Description'].unique()
             selected_series= st.selectbox("select indicator to show on map:", series_descriptions, label_visibility="collapsed")
             series_df = df[(df['Series Description'] == selected_series)]
-            most_recent_year = series_df['Year'].max()
+
+            most_recent_year_with_value = series_df.dropna(subset=['Value'])
+            most_recent_year = most_recent_year_with_value['Year'].max()
+            map_df = most_recent_year_with_value[most_recent_year_with_value['Year'] == most_recent_year]
+
             map_df = series_df[series_df['Year'] == most_recent_year]
 
             fig = px.choropleth(
