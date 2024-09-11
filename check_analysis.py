@@ -1,6 +1,7 @@
 
 import streamlit as st
 import duckdb
+from helper_functions import get_retriever, make_vectorstore
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores.duckdb import DuckDB
@@ -22,7 +23,7 @@ if 'chat_history' not in st.session_state:
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 
-chat_session_id = 'test_id'
+chat_session_id = 'check-analysis-id'
 
 def clear_chat_history(session_id):
     if session_id in st.session_state.chat_history:
@@ -39,37 +40,6 @@ def display_chat_history(session_id):
     else:   
         for message in messages:
             st.chat_message(message["role"]).markdown(message["content"])
-
-@st.cache_resource
-def make_vectorstore():
-    # create embedding model
-    embedding_model = AzureOpenAIEmbeddings(
-        model="smudataembed",
-        api_key=st.secrets['azure'],
-        azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-    )
-
-    # create DuckDB vectorstore
-    conn = duckdb.connect(database=':memory:',
-        config={
-                "enable_external_access": "false",
-                "autoinstall_known_extensions": "false",
-                "autoload_known_extensions": "false"
-            }
-    )
-
-    vectorstore = DuckDB(connection=conn, embedding=embedding_model)
-    return vectorstore
-
-@st.cache_resource
-def get_splits():
-    doc_path = "flagship report shortened.pdf"
-    loader = PyPDFLoader(doc_path)
-    docs = loader.load()
-
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    splits = text_splitter.split_documents(docs)
-    return splits
 
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
@@ -88,11 +58,7 @@ llm = AzureChatOpenAI(
     openai_api_version="2024-05-01-preview"
 )
 
-splits = get_splits()
-vectorstore = make_vectorstore()
-vectorstore.add_documents(splits)
-
-retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+retriever = get_retriever('content/vectorstore.duckdb')
 
 prompt = ChatPromptTemplate.from_messages(
     [
