@@ -291,8 +291,8 @@ with st.container():
             df_string = "There is no DataFrame available."
 
         
-        num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
-        st.write(f"number tokens for used for dataset: {num_tokens}")
+        # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
+        # st.write(f"number tokens for used for dataset: {num_tokens}")
 
         # get reponse
         with_message_history = RunnableWithMessageHistory(
