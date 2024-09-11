@@ -286,13 +286,13 @@ with st.container():
 
         if filtered_df is not None:
             df_string = summarize_dataframe(filtered_df)
+            df_string = filtered_df.to_string()
         else:
             df_string = "There is no DataFrame available."
 
-        df_string = filtered_df.to_string()
-
-        # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
-        # st.write(f"num tokens for dataset (prompts are trimmed to last 1000 tokens): {num_tokens}")
+        
+        num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
+        st.write(f"number tokens for used for dataset: {num_tokens}")
 
         # get reponse
         with_message_history = RunnableWithMessageHistory(
