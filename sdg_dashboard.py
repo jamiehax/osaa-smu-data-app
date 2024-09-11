@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+from mitosheet.streamlit.v1 import spreadsheet
+
 
 
 @st.cache_data
@@ -247,5 +249,19 @@ if df is not None:
 
     show_map()
 
+else:
+    st.write("data not available for the selected indicator(s), countries, and year(s).")
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
+
+
+st.subheader("Mitosheet")
+if df is not None and not df.empty:
+    new_dfs, code = spreadsheet(df)
+    if code:
+        st.markdown("##### Generated Code:")
+        st.write(code)
 else:
     st.write("data not available for the selected indicator(s), countries, and year(s).")

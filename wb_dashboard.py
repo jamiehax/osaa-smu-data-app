@@ -2,9 +2,10 @@ import streamlit as st
 import wbgapi as wb
 import pandas as pd
 import plotly.express as px
+from mitosheet.streamlit.v1 import spreadsheet
 
 
-# cached functions for retreiving metadata
+# cached functions for retreiving data
 @st.cache_data
 def get_databases():
     try:
@@ -26,7 +27,7 @@ def get_indicators():
 @st.cache_data
 def get_query_result(search_query, db):
     try:
-        data = list(wb.series.list(q=search_query))
+        data = list(wb.series.list(q=search_query, db=db))
     except Exception as e:
         data = e
     
@@ -41,6 +42,8 @@ def get_countries():
     
     return data
     
+def get_countries_by_region(region):
+    return iso3_reference_df[iso3_reference_df['Region Name'] == region]['iso3'].tolist()
 
 
 # title and introduction
@@ -78,6 +81,7 @@ else:
     selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed", placeholder="select indicator(s)")
     selected_indicators = [indicator.split(' - ')[0] for indicator in selected_indicator_names]
 
+
 st.markdown("#### Select Countries:")
 
 countries = get_countries()
@@ -97,9 +101,6 @@ else:
         selected_regions = [r for r in regions if r != 'SELECT ALL']
     else:
         selected_regions = [r for r in selected_regions if r != 'SELECT ALL']
-
-    def get_countries_by_region(region):
-        return iso3_reference_df[iso3_reference_df['Region Name'] == region]['iso3'].tolist()
 
     selected_countries = []
     for region in selected_regions:
@@ -130,7 +131,7 @@ selected_years = st.slider( "Select a range of years:", min_value=1960, max_valu
 # get world bank data
 try:
     if st.button("get data", type='primary', use_container_width=True):
-        wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
+        wb_df = wb.data.DataFrame(selected_indicators, time=list(range(selected_years[0], selected_years[1]))).reset_index()
 
         # deal with edge cases where there is no economy column
         if 'economy' not in wb_df.columns:
@@ -141,21 +142,24 @@ try:
             wb_df['series'] = selected_indicators[0]
     
         # add country reference codes
-        df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
-        
+        wb_df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
+
         # rename and drop duplicate columns
-        df.drop(columns=['iso3'], inplace=True)
-        df = df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
+        wb_df.drop(columns=['iso3'], inplace=True)
+        wb_df = wb_df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
 
         # add indicator description
         indicator_code_description_map = {d['id']: d['value'] for d in query_result}
-        df['Indicator Description'] = df['Indicator'].map(indicator_code_description_map)
+        wb_df['Indicator Description'] = wb_df['Indicator'].map(indicator_code_description_map)
 
         # reorder columns
-        column_order = ['Indicator', 'Indicator Description', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in df.columns if col.startswith('YR')]
-        df = df[column_order]
+        column_order = ['Indicator', 'Indicator Description', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in wb_df.columns if col.startswith('YR')]
+        wb_df = wb_df[column_order]
 
+        # subset df to be only selected countries
+        df = wb_df[wb_df['iso3'].isin(selected_iso3_codes)]
         st.dataframe(df)
+
     else:
         df = None
 except Exception as e:
@@ -170,6 +174,7 @@ if df is not None:
     df_melted = df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
     df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
     
+    # plot country indicators
     try:
         fig = px.line(
             df_melted, 
@@ -186,6 +191,38 @@ if df is not None:
 
     except Exception as e:
         st.error(f"Error generating Time Series Graph:\n\n{e}")
+
+
+   # plot region line chart
+    
+    region_df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
+    region_df_melted['Year'] = region_df_melted['Year'].str.extract('(\d{4})').astype(int)
+    
+    region_avg_df = region_df_melted.groupby(['Indicator', 'Region Name', 'Year'])['Value'].mean().reset_index()
+    world_avg_df = region_avg_df.groupby(['Indicator', 'Year'])['Value'].mean().reset_index()
+
+    world_avg_df['Region Name'] = 'World'
+    world_avg_df.rename(columns={'Value': 'Value'}, inplace=True)
+    region_avg_df = pd.concat([region_avg_df, world_avg_df], ignore_index=True)
+
+    try:
+        fig = px.line(
+            region_avg_df, 
+            x='Year', 
+            y='Value', 
+            color='Region Name', 
+            symbol='Indicator',
+            markers=True,
+            labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
+            title="Time Series of Indicators by Region and Indicator"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Error generating Time Series Graph:\n\n{e}")
+
+    
 
     @st.fragment
     def show_map():
@@ -218,5 +255,19 @@ if df is not None:
 
     show_map()
 
+else:
+    st.write("data not available for the selected indicator(s), countries, and year(s).")
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
+
+
+st.subheader("Mitosheet")
+if df is not None and not df.empty:
+    new_dfs, code = spreadsheet(df)
+    if code:
+        st.markdown("##### Generated Code:")
+        st.write(code)
 else:
     st.write("data not available for the selected indicator(s), countries, and year(s).")
