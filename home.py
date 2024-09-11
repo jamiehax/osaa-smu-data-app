@@ -41,6 +41,6 @@ st.page_link("check_analysis.py", label="Contradictory Analysis Tool", icon=":ma
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-st.header("Settings")
-if st.button("refresh database", use_container_width=True, type="primary"):
-    refresh_db(st.session_state.db_path)
+# st.header("Settings")
+# if st.button("refresh database", use_container_width=True, type="primary"):
+#     refresh_db(st.session_state.db_path)
