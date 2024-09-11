@@ -2,6 +2,11 @@ import pandas as pd
 import duckdb
 import os
 import numpy as np
+import streamlit as st
+from langchain_community.vectorstores.duckdb import DuckDB
+from langchain_openai import AzureOpenAIEmbeddings
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 def preprocess(df):
@@ -14,8 +19,8 @@ def preprocess(df):
 # create a test DuckDB and return the path
 def setup_db():
     
-    DB_PATH = 'db.duckdb'
-    CSV_DIR = 'data'
+    DB_PATH = 'content/db.duckdb'
+    CSV_DIR = 'content/data'
 
     # check to see if database already exists
     if not os.path.exists(DB_PATH):
@@ -34,10 +39,7 @@ def setup_db():
         # create a test dataset
         countries = ["Nigeria", "Kenya", "South Africa", "Ghana", "Egypt", "Morocco", "Ethiopia", "Tanzania", "Uganda", "Algeria"]
         years = list(range(2000, 2024))
-        
-        # generate data
-        countries = ['Nigeria', 'Ethiopia', 'Egypt', 'DR Congo', 'South Africa', 'Tanzania', 'Kenya', 'Uganda', 'Sudan', 'Morocco']
-        years = np.arange(2000, 2024)
+
         country_data = {
             country: {
                 "base_population": np.random.randint(10_000_000, 50_000_000),  # Base population
@@ -143,3 +145,65 @@ def get_df(db_path, name):
     conn.close()
 
     return preprocess(df)
+
+
+def make_vectorstore():
+
+    DB_PATH = "content/vectorstore.duckdb"
+
+    # create embedding model
+    embedding_model = AzureOpenAIEmbeddings(
+        model="smudataembed",
+        api_key=st.secrets['azure'],
+        azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
+    )
+
+    # create DuckDB vectorstore
+    conn = duckdb.connect(database=DB_PATH, read_only=False, 
+        config={
+                "enable_external_access": "false",
+                "autoinstall_known_extensions": "false",
+                "autoload_known_extensions": "false"
+            }
+    )
+
+    vectorstore = DuckDB(connection=conn, embedding=embedding_model)
+
+    # add docs to vectorstore
+    add_docs(vectorstore)
+
+
+def add_docs(vectorstore):
+    doc_dir_path = "content/rag_documents"
+    doc_files = [f for f in os.listdir(doc_dir_path) if f.endswith('.pdf')]
+    for doc_file in doc_files:
+        doc_path = os.path.join(doc_dir_path, doc_file)
+        loader = PyPDFLoader(doc_path)
+        docs = loader.load()
+
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+
+        vectorstore.add_documents(splits)
+
+
+def get_retriever(db_path):
+    embedding_model = AzureOpenAIEmbeddings(
+        model="smudataembed",
+        api_key=st.secrets['azure'],
+        azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
+    )
+
+    conn = duckdb.connect(database=db_path, read_only=False, 
+        config={
+                "enable_external_access": "false",
+                "autoinstall_known_extensions": "false",
+                "autoload_known_extensions": "false"
+            }
+    )
+
+    vectorstore = DuckDB(connection=conn, embedding=embedding_model)
+
+    retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+
+    return retriever
