@@ -4,12 +4,8 @@ import duckdb
 from helper_functions import get_retriever, make_vectorstore
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.vectorstores.duckdb import DuckDB
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from langchain_openai import AzureOpenAIEmbeddings
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 # os.environ["LANGCHAIN_TRACING_V2"] = "true"
@@ -42,7 +38,16 @@ def display_chat_history(session_id):
             st.chat_message(message["role"]).markdown(message["content"])
 
 def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
+    formatted_contexts = []
+    for doc in docs:
+        content = doc.page_content
+        source = doc.metadata.get("source", "Unknown Source")
+        page = doc.metadata.get("page", "Unknown Page")
+        
+        formatted_context = f"Publication Name: {source}. Page Number: {page}. Content: {content}"
+        formatted_contexts.append(formatted_context)
+    
+    return "\n\n".join(formatted_contexts)
 
 # title and introduction
 st.title("OSAA SMU's Contradictory Analysis Tool")
@@ -58,13 +63,14 @@ llm = AzureChatOpenAI(
     openai_api_version="2024-05-01-preview"
 )
 
+
 retriever = get_retriever('content/vectorstore.duckdb')
 
 prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are an assistant. Your task is to determine whether the provided analysis contradicts any context from our existing publications. If the analysis contradicts any context from our existing publications, clearly state that there is a contradiction. If there is no contradiction, state that there is no contradiction. If you are unsure, state that you are unsure."
+            "You are an assistant. Your task is to determine whether the provided analysis contradicts any content from our existing publications. If the analysis contradicts any content from our existing publications, clearly state that there is a contradiction. If there is no contradiction, state that there is no contradiction. If you are unsure, state that you are unsure. Reference the publication name when making your decision."
         ),
         (
             "human",
@@ -72,11 +78,11 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Existing Publication Context: {context}."
+            "Existing Publication Content: {context}."
         ),
         (
             "system",
-            "Based on the Analysis and the Existing Publication Context, does the analysis contradict anything in the existing publications? Explain your reasoning and provide quotes demonstrating your reasoning if possible."
+            "Based on the Analysis and the Existing Publication Context, does the analysis contradict anything in the existing publications? Always provide the publication name and page number of existing publication content, and if possible, provide a quote to support your reasoning."
         )
     ]
 )
@@ -115,3 +121,6 @@ with button_container:
     if st.button("clear chat history", type="secondary", use_container_width=True):
         clear_chat_history(chat_session_id)
         st.rerun()
+
+    # if st.button("remake vectorstore", use_container_width=True):
+    #     make_vectorstore()
