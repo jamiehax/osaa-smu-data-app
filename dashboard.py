@@ -97,7 +97,7 @@ if 'chat_history' not in st.session_state:
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 
-chat_session_id = 'test_id'
+chat_session_id = 'dashboard-id'
 CONTEXT_WINDOW = 8192
 
 # title and introduction
@@ -247,14 +247,18 @@ trimmer = trim_messages(
 
 prompt = ChatPromptTemplate.from_messages(
     [
+        # (
+        #     "system",
+        #     "You are a helpful data analyst assistant. Answer the user's question about their data. You will not have access to the entire dataset, instead you will get the first 5 rows of the data, as well as summaries of the columns. Use this to infer the answers to the users questions.",
+        # ),
         (
             "system",
-            "You are a helpful data analyst assistant. Answer the user's question about their data. You will not have access to the entire dataset, instead you will get the first 5 rows of the data, as well as summaries of the columns. Use this to infer the answers to the users questions.",
+            "You are a helpful data analyst assistant. Answer the user's question about their data.",
         ),
         MessagesPlaceholder(variable_name="messages"),
         (
             "human",
-            "Here is the Pandas DataFrame summary: {dataframe}."
+            "Here is the Pandas DataFrame: {dataframe}."
         ),
         (
             "human",
@@ -284,6 +288,8 @@ with st.container():
             df_string = summarize_dataframe(filtered_df)
         else:
             df_string = "There is no DataFrame available."
+
+        df_string = filtered_df.to_string()
 
         # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
         # st.write(f"num tokens for dataset (prompts are trimmed to last 1000 tokens): {num_tokens}")
