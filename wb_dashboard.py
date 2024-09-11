@@ -201,8 +201,6 @@ if df is not None:
             most_recent_year = most_recent_year_with_value['Year'].max()
             map_df = most_recent_year_with_value[most_recent_year_with_value['Year'] == most_recent_year]
 
-            st.write(map_df)
-
             fig = px.choropleth(
                 map_df,
                 locations='iso3',
