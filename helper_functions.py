@@ -179,10 +179,22 @@ def add_docs(vectorstore):
     for doc_file in doc_files:
         doc_path = os.path.join(doc_dir_path, doc_file)
         loader = PyPDFLoader(doc_path)
-        docs = loader.load()
+        doc = loader.load()
+        
 
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        splits = text_splitter.split_documents(docs)
+        splits = text_splitter.split_documents(doc)
+
+        for split in splits:
+            source_name = os.path.splitext(doc_file)[0]
+            page_number = split.metadata.get("page", "Unknown Page")
+            if isinstance(page_number, int):
+                page_number += 1
+
+            split.metadata = {
+                "source": source_name,
+                "page": page_number
+            }
 
         vectorstore.add_documents(splits)
 
