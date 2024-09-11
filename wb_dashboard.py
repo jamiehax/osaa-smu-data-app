@@ -3,6 +3,8 @@ import wbgapi as wb
 import pandas as pd
 import plotly.express as px
 from mitosheet.streamlit.v1 import spreadsheet
+from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
+import streamlit.components.v1 as components
 
 
 # cached functions for retreiving data
@@ -221,8 +223,7 @@ if df is not None:
 
     except Exception as e:
         st.error(f"Error generating Time Series Graph:\n\n{e}")
-
-    
+        
 
     @st.fragment
     def show_map():
@@ -263,11 +264,31 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 
-# st.subheader("Mitosheet")
-# if df is not None and not df.empty:
-#     new_dfs, code = spreadsheet(df)
-#     if code:
-#         st.markdown("##### Generated Code:")
-#         st.write(code)
-# else:
-#     st.write("data not available for the selected indicator(s), countries, and year(s).")
+@st.fragment
+def show_mitosheet():
+    st.subheader("Mitosheet")
+    if st.button("generate mitosheet", use_container_width=True, type='primary'):
+        if df is not None and not df.empty:
+            new_dfs, code = spreadsheet(df)
+            if code:
+                st.markdown("##### Generated Code:")
+                st.write(code)
+        else:
+            st.write("data not available for the selected indicator(s), countries, and year(s).")
+
+show_mitosheet()
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
+
+st.subheader("Data Visualization Tool")
+if df is not None and not df.empty:
+    init_streamlit_comm()
+    @st.cache_resource
+    def get_pyg_html(df: pd.DataFrame) -> str:
+        html = get_streamlit_html(df, spec="./gw0.json", use_kernel_calc=True, debug=False)
+        return html
+
+    components.html(get_pyg_html(df), width=1300, height=1000, scrolling=True)
+else:
+    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
