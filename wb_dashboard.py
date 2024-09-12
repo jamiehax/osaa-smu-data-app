@@ -5,9 +5,6 @@ import plotly.express as px
 from mitosheet.streamlit.v1 import spreadsheet
 from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
 import streamlit.components.v1 as components
-from mitosheet.streamlit.v1 import spreadsheet
-from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
-import streamlit.components.v1 as components
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
 from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
