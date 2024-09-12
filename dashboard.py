@@ -90,12 +90,12 @@ def summarize_dataframe(df, max_rows=5, max_categories=25):
     return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
 
 # create session states
-if 'report' not in st.session_state:
-    st.session_state.report = None
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
+if 'df' not in st.session_state:
+    st.session_state.df = None
 
 chat_session_id = 'wb-dashboard-id'
 
@@ -118,10 +118,9 @@ dataset_names = get_dataset_names(st.session_state.db_path)
 df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
 if df_name is not None:
-    df = get_df(st.session_state.db_path, df_name)
+    st.session_state.df = get_df(st.session_state.db_path, df_name)
 else:
-    df = None
-    st.session_state.report = None
+    st.session_state.df = None
 
 
 st.markdown("##### Upload a Dataset (CSV or excel)")
@@ -130,9 +129,12 @@ uploaded_df = st.file_uploader("Choose a file", type=["csv", "xlsx"], label_visi
 if uploaded_df is not None:
     df_name = uploaded_df.name
     if uploaded_df.name.endswith('.csv'):
-        df = pd.read_csv(uploaded_df)
+        st.session_state.df = pd.read_csv(uploaded_df)
     elif uploaded_df.name.endswith('.xlsx'):
-        df = pd.read_excel(uploaded_df)
+        st.session_state.df = pd.read_excel(uploaded_df)
+
+
+df = st.session_state.df
 
 # filter the dataset
 if df is not None:
@@ -156,7 +158,7 @@ if df is not None:
                         min_val, max_val = float(df[col].min()), float(df[col].max())
                         selected_range = st.slider(f"Select range for {col} (float):", min_val, max_val, (min_val, max_val))
             
-                filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
+                    filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
             
             elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
                 if df[col].isna().all() or df[col].nunique() == 1:
@@ -182,6 +184,7 @@ if df is not None:
 
 else:
     filtered_df = None
+
 
 st.markdown("### Dataset")
 if filtered_df is not None and not filtered_df.empty:
@@ -374,6 +377,9 @@ st.write("")
 st.subheader("Mitosheet")
 if filtered_df is not None and not filtered_df.empty:
     new_dfs, code = spreadsheet(filtered_df)
+    if code:
+        st.markdown("##### Generated Code:")
+        st.write(code)
 else:
     st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
 
