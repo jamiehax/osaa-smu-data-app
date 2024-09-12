@@ -97,8 +97,8 @@ if 'chat_history' not in st.session_state:
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 
-chat_session_id = 'dashboard-id'
-CONTEXT_WINDOW = 8192
+chat_session_id = 'wb-dashboard-id'
+
 
 # title and introduction
 st.title("OSAA SMU's Data Dashboard")
@@ -230,7 +230,7 @@ st.subheader("Natural Language Queries")
 st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
 
 model = AzureChatOpenAI(
-    azure_deployment="gpt35osaa",
+    azure_deployment="osaagpt32k",
     api_key=st.secrets['azure'],
     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     openai_api_version="2024-05-01-preview"
@@ -374,9 +374,6 @@ st.write("")
 st.subheader("Mitosheet")
 if filtered_df is not None and not filtered_df.empty:
     new_dfs, code = spreadsheet(filtered_df)
-    if code:
-        st.markdown("##### Generated Code:")
-        st.write(code)
 else:
     st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
 
