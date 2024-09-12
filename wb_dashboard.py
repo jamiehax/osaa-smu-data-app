@@ -131,14 +131,14 @@ def summarize_dataframe(df, max_rows=5, max_categories=25):
     return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
 
 # create session states
-if 'report' not in st.session_state:
-    st.session_state.report = None
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
+if 'wb_df' not in st.session_state:
+    st.session_state['sdg_df'] = None
 
-chat_session_id = 'dashboard-id'
+chat_session_id = 'wb-dashboard-id'
 
 # title and introduction
 st.title("OSAA SMU's World Bank Data Dashboard")
@@ -253,72 +253,76 @@ try:
         # subset df to be only selected countries
         df = wb_df[wb_df['iso3'].isin(selected_iso3_codes)]
         st.dataframe(df)
+        st.session_state.wb_df = df
 
     else:
         df = None
+        st.session_state.wb_df = df
+
 except Exception as e:
     st.error(f"no data retrieved. this is most likely due to blank indicator, country, or time values. please ensure there are values for the indicator, country, and time range. \n\n Error: {e}")
     df = None
+    st.session_state.wb_df = df
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-st.subheader("Explore Data")
-if df is not None:
-    df_melted = df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
-    df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
-    
-    # plot country indicators
-    try:
-        fig = px.line(
-            df_melted, 
-            x='Year', 
-            y='Value', 
-            color='Country or Area', 
-            symbol='Indicator',
-            markers=True,
-            labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
-            title="Time Series of Indicators by Country and Indicator"
-        )
 
-        st.plotly_chart(fig, use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Error generating Time Series Graph:\n\n{e}")
-
-
-   # plot region line chart
-    
-    region_df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
-    region_df_melted['Year'] = region_df_melted['Year'].str.extract('(\d{4})').astype(int)
-    
-    region_avg_df = region_df_melted.groupby(['Indicator', 'Region Name', 'Year'])['Value'].mean().reset_index()
-    world_avg_df = region_avg_df.groupby(['Indicator', 'Year'])['Value'].mean().reset_index()
-
-    world_avg_df['Region Name'] = 'World'
-    world_avg_df.rename(columns={'Value': 'Value'}, inplace=True)
-    region_avg_df = pd.concat([region_avg_df, world_avg_df], ignore_index=True)
-
-    try:
-        fig = px.line(
-            region_avg_df, 
-            x='Year', 
-            y='Value', 
-            color='Region Name', 
-            symbol='Indicator',
-            markers=True,
-            labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
-            title="Time Series of Indicators by Region and Indicator"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Error generating Time Series Graph:\n\n{e}")
+@st.fragment
+def show_plots():
+    st.subheader("Explore Data")
+    if st.session_state.wb_df is not None:
+        df_melted = st.session_state.wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
+        df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
         
+        # plot country indicators
+        try:
+            fig = px.line(
+                df_melted, 
+                x='Year', 
+                y='Value', 
+                color='Country or Area', 
+                symbol='Indicator',
+                markers=True,
+                labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
+                title="Time Series of Indicators by Country and Indicator"
+            )
 
-    @st.fragment
-    def show_map():
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            st.error(f"Error generating Time Series Graph:\n\n{e}")
+
+
+    # plot region line chart
+        
+        region_df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
+        region_df_melted['Year'] = region_df_melted['Year'].str.extract('(\d{4})').astype(int)
+        
+        region_avg_df = region_df_melted.groupby(['Indicator', 'Region Name', 'Year'])['Value'].mean().reset_index()
+        world_avg_df = region_avg_df.groupby(['Indicator', 'Year'])['Value'].mean().reset_index()
+
+        world_avg_df['Region Name'] = 'World'
+        world_avg_df.rename(columns={'Value': 'Value'}, inplace=True)
+        region_avg_df = pd.concat([region_avg_df, world_avg_df], ignore_index=True)
+
+        try:
+            fig = px.line(
+                region_avg_df, 
+                x='Year', 
+                y='Value', 
+                color='Region Name', 
+                symbol='Indicator',
+                markers=True,
+                labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
+                title="Time Series of Indicators by Region and Indicator"
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            st.error(f"Error generating Time Series Graph:\n\n{e}")
+
         try:
             st.markdown("###### Choose an Indicator to show on the map")
             indicator_descriptions = df_melted['Indicator Description'].unique()
@@ -346,144 +350,149 @@ if df is not None:
         except Exception as e:
             st.error(f"Error generating Map Graph:\n\n{e}")
 
-    show_map()
 
-else:
-    st.write("data not available for the selected indicator(s), countries, and year(s).")
-
-
-# st.markdown("<hr>", unsafe_allow_html=True)
-# st.write("")
-
-# # natural language dataset exploration
-# st.subheader("Natural Language Queries")
-# st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
-
-# model = AzureChatOpenAI(
-#     azure_deployment="osaagpt32k",
-#     api_key=st.secrets['azure'],
-#     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-#     openai_api_version="2024-05-01-preview"
-# )
-
-# trimmer = trim_messages(
-#     max_tokens=1000, # model max context size is 8192
-#     strategy="last",
-#     token_counter=tiktoken_counter,
-#     include_system=True,
-#     allow_partial=False,
-#     start_on="human",
-# )
-
-# prompt = ChatPromptTemplate.from_messages(
-#     [
-#         # (
-#         #     "system",
-#         #     "You are a helpful data analyst assistant. Answer the user's question about their data. You will not have access to the entire dataset, instead you will get the first 5 rows of the data, as well as summaries of the columns. Use this to infer the answers to the users questions.",
-#         # ),
-#         (
-#             "system",
-#             "You are a helpful data analyst assistant. Answer the user's question about their data.",
-#         ),
-#         MessagesPlaceholder(variable_name="messages"),
-#         (
-#             "human",
-#             "Here is the Pandas DataFrame: {dataframe}."
-#         ),
-#         (
-#             "human",
-#             "My question is: {prompt}."
-#         )
-#     ]
-# )
-
-# chain = RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) | prompt | model
-
-# config = {"configurable": {"session_id": chat_session_id}}
+    else:
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
+show_plots()
 
 
-# messages_container = st.container(height=500)
-# with messages_container:
-#     display_chat_history(chat_session_id)
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
 
 
-# with st.container():
-#     if prompt := st.chat_input("ask about the data..."):
+@st.fragment
+def show_chatbot():
+    st.subheader("Natural Language Queries")
+    st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
 
-#         st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": prompt})
+    model = AzureChatOpenAI(
+        azure_deployment="osaagpt32k",
+        api_key=st.secrets['azure'],
+        azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
+        openai_api_version="2024-05-01-preview"
+    )
 
-#         messages_container.chat_message("user").markdown(prompt)
+    trimmer = trim_messages(
+        max_tokens=1000, # model max context size is 8192
+        strategy="last",
+        token_counter=tiktoken_counter,
+        include_system=True,
+        allow_partial=False,
+        start_on="human",
+    )
 
-#         if df is not None:
-#             df_string = summarize_dataframe(df)
-#             df_string = df.to_string()
-#         else:
-#             df_string = "There is no DataFrame available."
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            # (
+            #     "system",
+            #     "You are a helpful data analyst assistant. Answer the user's question about their data. You will not have access to the entire dataset, instead you will get the first 5 rows of the data, as well as summaries of the columns. Use this to infer the answers to the users questions.",
+            # ),
+            (
+                "system",
+                "You are a helpful data analyst assistant. Answer the user's question about their data.",
+            ),
+            MessagesPlaceholder(variable_name="messages"),
+            (
+                "human",
+                "Here is the Pandas DataFrame: {dataframe}."
+            ),
+            (
+                "human",
+                "My question is: {prompt}."
+            )
+        ]
+    )
 
-        
-#         # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
-#         # st.write(f"number tokens for used for dataset: {num_tokens}")
+    chain = RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) | prompt | model
 
-#         # get reponse
-#         with_message_history = RunnableWithMessageHistory(
-#             chain,
-#             get_session_history,
-#             input_messages_key="messages",
-#         )
-#         response_generator = with_message_history.stream(
-#             {
-#                 "messages": [HumanMessage(content=prompt)],
-#                 "dataframe": df_string,
-#                 "prompt": prompt
-#             },
-#             config=config
-#         )
-        
-#         with messages_container:
-#             with st.chat_message("assistant"):
-#                 try:
-#                     response = st.write_stream(response_generator)
-#                 except Exception as e:
-#                     response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
-#                     st.write(response)
-
-#         st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
-
-
-#     if st.button("clear chat history", type="primary", use_container_width=True):
-#         clear_chat_history(chat_session_id)
-#         st.rerun()
-
-
-# st.markdown("<hr>", unsafe_allow_html=True)
-# st.write("")
+    config = {"configurable": {"session_id": chat_session_id}}
 
 
-# @st.fragment
-# def show_mitosheet():
-#     st.subheader("Mitosheet")
-#     if st.button("generate mitosheet", use_container_width=True, type='primary'):
-#         if df is not None and not df.empty:
-#             new_dfs, code = spreadsheet(df)
-#             if code:
-#                 st.markdown("##### Generated Code:")
-#                 st.write(code)
-#         else:
-#             st.write("data not available for the selected indicator(s), countries, and year(s).")
+    messages_container = st.container(height=500)
+    with messages_container:
+        display_chat_history(chat_session_id)
 
-# show_mitosheet()
 
-# st.markdown("<hr>", unsafe_allow_html=True)
-# st.write("")
+    with st.container():
+        if prompt := st.chat_input("ask about the data..."):
 
-# st.subheader("Data Visualization Tool")
-# if df is not None and not df.empty:
-#     init_streamlit_comm()
-#     @st.cache_resource
-#     def get_pyg_html(df: pd.DataFrame) -> str:
-#         html = get_streamlit_html(df, spec="./gw0.json", use_kernel_calc=True, debug=False)
-#         return html
+            st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": prompt})
 
-#     components.html(get_pyg_html(df), width=1300, height=1000, scrolling=True)
-# else:
-#     st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+            messages_container.chat_message("user").markdown(prompt)
+
+            if st.session_state.wb_df is not None:
+                df_string = summarize_dataframe(st.session_state.wb_df)
+                df_string = st.session_state.wb_df.to_string()
+            else:
+                df_string = "There is no DataFrame available."
+
+            
+            # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
+            # st.write(f"number tokens for used for dataset: {num_tokens}")
+
+            # get reponse
+            with_message_history = RunnableWithMessageHistory(
+                chain,
+                get_session_history,
+                input_messages_key="messages",
+            )
+            response_generator = with_message_history.stream(
+                {
+                    "messages": [HumanMessage(content=prompt)],
+                    "dataframe": df_string,
+                    "prompt": prompt
+                },
+                config=config
+            )
+            
+            with messages_container:
+                with st.chat_message("assistant"):
+                    try:
+                        response = st.write_stream(response_generator)
+                    except Exception as e:
+                        response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
+                        st.write(response)
+
+            st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
+
+
+        if st.button("clear chat history", type="primary", use_container_width=True):
+            clear_chat_history(chat_session_id)
+show_chatbot()
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
+
+
+@st.fragment
+def show_mitosheet():
+    st.subheader("Mitosheet")
+    if st.session_state.wb_df is not None and not st.session_state.wb_df.empty:
+        new_dfs, code = spreadsheet(st.session_state.wb_df)
+        if code:
+            st.markdown("##### Generated Code:")
+            st.code(code)
+    else:
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
+show_mitosheet()
+
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
+
+
+@st.fragment
+def show_pygwalker():
+    st.subheader("Data Visualization Tool")
+    if st.session_state.wb_df is not None and not st.session_state.wb_df.empty:
+        init_streamlit_comm()
+        @st.cache_resource
+        def get_pyg_html(df: pd.DataFrame) -> str:
+            html = get_streamlit_html(st.session_state.wb_df, spec="./gw0.json", use_kernel_calc=True, debug=False)
+            return html
+
+        components.html(get_pyg_html(st.session_state.wb_df), width=1300, height=1000, scrolling=True)
+    else:
+        st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+show_pygwalker()

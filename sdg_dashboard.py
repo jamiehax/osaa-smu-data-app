@@ -22,6 +22,10 @@ def get_data(url):
     return data
 
 
+if 'sdg_df' not in st.session_state:
+    st.session_state['sdg_df'] = None
+
+
 # base url for SDG requests
 BASE_URL = "https://unstats.un.org/sdgs/UNSDGAPIV5"
 
@@ -185,48 +189,54 @@ with col2:
             column_order = ['Indicator', 'Series', 'Year', 'Country or Area', 'Value', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49', 'Series Description'] + [col for col in df.columns if col.startswith('YR')]
             df = df[column_order]
 
+            st.session_state.sdg_df = df
+
         else:
             df = None
+            st.session_state.sdg_df = df
 
     else:
         df = None
+        st.session_state.sdg_df = df
 
 
-if df is not None:
-    if not df.empty:
-        st.dataframe(df)
+if st.session_state.sdg_df is not None:
+    if not st.session_state.sdg_df.empty:
+        st.dataframe(st.session_state.sdg_df)
     else:
         st.write("no data available for the selection")
+
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-st.subheader("Explore Data")
-if df is not None:
-    try:
-        fig = px.line(
-            df, 
-            x='Year', 
-            y='Value', 
-            color='Country or Area', 
-            symbol='Series',
-            markers=True,
-            labels={'Country or Area': 'Country', 'Series': 'Series', 'Series Description': 'Series Description', 'Value': 'Value', 'Year': 'Year'},
-            title="Time Series of Indicators by Country and Indicator"
-        )
+@st.fragment
+def show_plots():
+    st.subheader("Explore Data")
+    if st.session_state.sdg_df is not None:
+        try:
+            fig = px.line(
+                st.session_state.sdg_df, 
+                x='Year', 
+                y='Value', 
+                color='Country or Area', 
+                symbol='Series',
+                markers=True,
+                labels={'Country or Area': 'Country', 'Series': 'Series', 'Series Description': 'Series Description', 'Value': 'Value', 'Year': 'Year'},
+                title="Time Series of Indicators by Country and Indicator"
+            )
 
-        st.plotly_chart(fig)
-    except Exception as e:
-        st.error(f"Error generating graph:\n\n{e}")
+            st.plotly_chart(fig)
+        except Exception as e:
+            st.error(f"Error generating graph:\n\n{e}")
 
-    @st.fragment
-    def show_map():
+
         try:           
             st.markdown("###### Choose an Series to show on the map")
-            series_descriptions = df['Series Description'].unique()
+            series_descriptions = st.session_state.sdg_df['Series Description'].unique()
             selected_series= st.selectbox("select indicator to show on map:", series_descriptions, label_visibility="collapsed")
-            series_df = df[(df['Series Description'] == selected_series)]
+            series_df = st.session_state.sdg_df[(st.session_state.sdg_df['Series Description'] == selected_series)]
 
             most_recent_year_with_value = series_df.dropna(subset=['Value'])
             most_recent_year = most_recent_year_with_value['Year'].max()
@@ -249,43 +259,41 @@ if df is not None:
         except Exception as e:
             st.error(f"Error generating Map Graph:\n\n{e}")
 
-    show_map()
 
-else:
-    st.write("data not available for the selected indicator(s), countries, and year(s).")
-
-
-# st.markdown("<hr>", unsafe_allow_html=True)
-# st.write("")
+    else:
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
+show_plots()
 
 
-# @st.fragment
-# def show_mitosheet():
-#     st.subheader("Mitosheet")
-#     if st.button("generate mitosheet", use_container_width=True, type='primary'):
-#         if df is not None and not df.empty:
-#             new_dfs, code = spreadsheet(df)
-#             if code:
-#                 st.markdown("##### Generated Code:")
-#                 st.write(code)
-#         else:
-#             st.write("data not available for the selected indicator(s), countries, and year(s).")
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
 
-# show_mitosheet()
+@st.fragment
+def show_mitosheet():
+    st.subheader("Mitosheet")
+    if st.session_state.sdg_df is not None and not st.session_state.sdg_df.empty:
+        new_dfs, code = spreadsheet(st.session_state.sdg_df)
+        if code:
+            st.markdown("##### Generated Code:")
+            st.code(code, language='python')
+    else:
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
+show_mitosheet()
 
+st.markdown("<hr>", unsafe_allow_html=True)
+st.write("")
 
-# st.markdown("<hr>", unsafe_allow_html=True)
-# st.write("")
+@st.fragment
+def show_pygwalker():
+    st.subheader("Data Visualization Tool")
+    if st.session_state.sdg_df is not None and not st.session_state.sdg_df.empty:
+        init_streamlit_comm()
+        @st.cache_resource
+        def get_pyg_html(df: pd.DataFrame) -> str:
+            html = get_streamlit_html(st.session_state.sdg_df, spec="./gw0.json", use_kernel_calc=True, debug=False)
+            return html
 
-
-# st.subheader("Data Visualization Tool")
-# if df is not None and not df.empty:
-#     init_streamlit_comm()
-#     @st.cache_resource
-#     def get_pyg_html(df: pd.DataFrame) -> str:
-#         html = get_streamlit_html(df, spec="./gw0.json", use_kernel_calc=True, debug=False)
-#         return html
-
-#     components.html(get_pyg_html(df), width=1300, height=1000, scrolling=True)
-# else:
-#     st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+        components.html(get_pyg_html(st.session_state.sdg_df), width=1300, height=1000, scrolling=True)
+    else:
+        st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+show_pygwalker()
