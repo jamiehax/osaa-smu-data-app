@@ -70,19 +70,19 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are an assistant. Your task is to determine whether the provided analysis contradicts any content from our existing publications. If the analysis contradicts any content from our existing publications, clearly state that there is a contradiction. If there is no contradiction, state that there is no contradiction. If you are unsure, state that you are unsure. Reference the publication name when making your decision."
+            "You are an assistant. Your task is to determine whether the provided analysis contradicts any content from our existing publications. If the analysis contradicts any content from our existing publications, clearly state that there is a contradiction. If the analysis does not directly contradict content from the existing publications, but contains data points or facts that are different from the publications, say so. If there is no contradiction, state that there is no contradiction. If you are unsure, state that you are unsure. Reference the publication name when making your decision."
         ),
         (
             "human",
-            "Analysis: {analysis}."
+            "provided analysis: {analysis}."
         ),
         (
             "human",
-            "Existing Publication Content: {context}."
+            "existing publication content: {context}."
         ),
         (
             "system",
-            "Based on the Analysis and the Existing Publication Context, does the analysis contradict anything in the existing publications? Always provide the publication name and page number of existing publication content, and if possible, provide a quote to support your reasoning."
+            "Based on the Analysis and the existing publication content, does the analysis contradict anything in the existing publications? Always provide the publication name and page number of existing publication content, and if possible, provide a quote to support your reasoning. If you are unsure whether there is a contradiction, provide the existing publication content so the user can make their own decision."
         )
     ]
 )
