@@ -33,11 +33,12 @@ def check_password():
     st.title("SMU's Data App")
     st.markdown("Welcome to the Office of the Speical Advisor to Africa's Strategic Management Unit's Data App. Please enter the app password to access the data app.")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.write("")
-
     st.text_input(
-        "Password", placeholder="enter the app password...", on_change=password_entered, key="password"
+        "Password",
+        placeholder="enter the app password...",
+        on_change=password_entered,
+        key="password",
+        label_visibility="collapsed"
     )
 
     if "password_correct" in st.session_state:
