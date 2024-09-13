@@ -29,15 +29,6 @@ st.markdown("#### Contradictory Analysis Tool")
 st.markdown("Use the Contradictory Analysis Tool to check if analysis contradicts any previous in OSAA's publications. This tool uses large language models with retrieval augmented generation and therefore may provide wrong answers, so alwayds double check.")
 st.page_link("check_analysis.py", label="Contradictory Analysis Tool", icon=":material/check:", use_container_width=True)
 
-
-# st.markdown("#### Data Sheet")
-# st.markdown("The Data Sheet allows for the automation of excel sheet processes and analysis of an uploaded dataset with *Mitosheet*.")
-# st.page_link("datasheet.py", label="Data Sheet", icon=":material/table_chart:", use_container_width=True)
-
-# st.markdown("#### Data Visualization Tool")
-# st.markdown("The Data Visualization tool uses *PyGWalker* to automatically create data visualizations like graphs and charts on uploaded datasets.")
-# st.page_link("visualizations.py", label="Data Visulization Tool", icon=":material/insert_chart:", use_container_width=True)
-
 # st.markdown("<hr>", unsafe_allow_html=True)
 # st.write("")
 

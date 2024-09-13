@@ -63,11 +63,6 @@ wb_dashboard_page = st.Page("wb_dashboard.py", title="WorldBank Data Dashboard",
 sdg_dashboard_page = st.Page("sdg_dashboard.py", title="SDG Data Dashboard", icon=":material/show_chart:")
 contradictory_analysis_page = st.Page("check_analysis.py", title="Contradictory Analysis Tool", icon=":material/check:")
 
-
-# mitosheet_page = st.Page("datasheet.py", title="Data Sheet", icon=":material/table_chart:")
-# visualizations_page = st.Page("visualizations.py", title="Data Visualization Tool", icon=":material/insert_chart:")
-
-
 pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, contradictory_analysis_page])
 st.set_page_config(page_title="SMU Data App", page_icon=":material/home:", layout="wide")
 pg.run()
