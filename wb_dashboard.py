@@ -359,8 +359,8 @@ st.write("")
 
 @st.fragment
 def show_chatbot():
-    st.subheader("Natural Language Queries")
-    st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
+    st.subheader("Natural Language Analysis")
+    st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
 
     model = AzureChatOpenAI(
         azure_deployment="osaagpt32k",

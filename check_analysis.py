@@ -1,6 +1,5 @@
 
 import streamlit as st
-import duckdb
 from helper_functions import get_retriever, make_vectorstore
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,24 +12,35 @@ from langchain_core.runnables import RunnablePassthrough
 # os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 # os.environ["LANGCHAIN_PROJECT"] = "osaa-smu-contradictory-analysis"
 
-
+# session state variables
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 
+# chat hsitory id for check analysis page
 chat_session_id = 'check-analysis-id'
 
-def clear_chat_history(session_id):
+
+# functions for the chatbot tool
+def clear_chat_history(session_id: str) -> None:
+    """
+    Clear the chat history for the passed session id.
+    """
+    
     if session_id in st.session_state.chat_history:
         st.session_state.chat_history[session_id].clear()
     st.session_state.formatted_chat_history = {}
 
-def display_chat_history(session_id):
+def display_chat_history(session_id: str) -> None:
+    """
+    Display the chat history in a formatted way.
+    """
+    
     messages = st.session_state.formatted_chat_history.get(session_id, None)
     if messages is None:
         st.session_state.formatted_chat_history[session_id] = []
-        intro_message = "Hi! I am a chatbot assistant with access to OSAA's publications. I am trained to find contradictions in analysis. Provide data points or analysis to me and I will see if it contradicts any previous publications!"
+        intro_message = "Hi! I am a chatbot assistant trained to help you understand your data. Ask me questions about your currently selected dataset in natural language and I will answer them!"
         st.chat_message("assistant").markdown(intro_message)
         st.session_state.formatted_chat_history[session_id].append({"role": "assistant", "content": intro_message})
     else:   
@@ -38,6 +48,10 @@ def display_chat_history(session_id):
             st.chat_message(message["role"]).markdown(message["content"])
 
 def format_docs(docs):
+    """
+    Join the retrieved documents together, along with title and Metadata, to pass to model.
+    """
+    
     formatted_contexts = []
     for doc in docs:
         content = doc.page_content
@@ -63,9 +77,10 @@ llm = AzureChatOpenAI(
     openai_api_version="2024-05-01-preview"
 )
 
-
+# document retriever
 retriever = get_retriever('content/vectorstore.duckdb')
 
+# prompt tempalte
 prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -87,6 +102,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+# get docs with retriever, format them, pass them to the model
 chain = (
     {"context": retriever | format_docs, "analysis": RunnablePassthrough()}
     | prompt

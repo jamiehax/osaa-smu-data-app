@@ -21,17 +21,43 @@ from langchain_core.messages import BaseMessage, ToolMessage
 from typing import List
 
 
+
+# create session states
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = {}
+if 'formatted_chat_history' not in st.session_state:
+    st.session_state.formatted_chat_history = {}
+if 'df' not in st.session_state:
+    st.session_state.df = None
+
+# page chat id
+chat_session_id = 'wb-dashboard-id'
+
+
+# functions for chat bot tool
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    """
+    Return the chat history for the passed session id.
+    """
+
     if session_id not in st.session_state.chat_history:
         st.session_state.chat_history[session_id] = InMemoryChatMessageHistory()
     return st.session_state.chat_history[session_id]
 
-def clear_chat_history(session_id):
+def clear_chat_history(session_id: str) -> None:
+    """
+    Clear the chat history for the passed session id.
+    """
+    
     if session_id in st.session_state.chat_history:
         st.session_state.chat_history[session_id].clear()
     st.session_state.formatted_chat_history = {}
 
-def display_chat_history(session_id):
+def display_chat_history(session_id: str) -> None:
+    """
+    Display the chat history in a formatted way.
+    """
+    
     messages = st.session_state.formatted_chat_history.get(session_id, None)
     if messages is None:
         st.session_state.formatted_chat_history[session_id] = []
@@ -43,10 +69,18 @@ def display_chat_history(session_id):
             st.chat_message(message["role"]).markdown(message["content"])
 
 def str_token_counter(text: str) -> int:
+    """
+    Return the number of tokens to encode the passed text.
+    """
+    
     enc = tiktoken.get_encoding("o200k_base")
     return len(enc.encode(text))
 
 def tiktoken_counter(messages: List[BaseMessage]) -> int:
+    """
+    Return the number of tokens for the message history using the tiktoken counter.
+    """
+    
     num_tokens = 3 
     tokens_per_message = 3
     tokens_per_name = 1
@@ -70,7 +104,11 @@ def tiktoken_counter(messages: List[BaseMessage]) -> int:
             num_tokens += tokens_per_name + str_token_counter(msg.name)
     return num_tokens
 
-def summarize_dataframe(df, max_rows=5, max_categories=25):
+def summarize_dataframe(df: pd.DataFrame, max_rows=5, max_categories=25) -> str:
+    """
+    Return a string combining a summary and preview of the dataframe. 
+    """
+    
     summary = df.describe().to_string()
     preview = df.head(max_rows).to_string()
 
@@ -89,15 +127,6 @@ def summarize_dataframe(df, max_rows=5, max_categories=25):
 
     return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
 
-# create session states
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = {}
-if 'formatted_chat_history' not in st.session_state:
-    st.session_state.formatted_chat_history = {}
-if 'df' not in st.session_state:
-    st.session_state.df = None
-
-chat_session_id = 'wb-dashboard-id'
 
 
 # title and introduction
@@ -113,6 +142,7 @@ st.subheader("Select and Filter a Dataset")
 st.write("Either search through existing datasets or upload your own dataset as a CSV or Excel file.")
 
 
+# select a dataset from the database
 st.markdown("##### Search Datasets")
 dataset_names = get_dataset_names(st.session_state.db_path)
 df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
@@ -123,6 +153,7 @@ else:
     st.session_state.df = None
 
 
+# select a a dataset by uploading it
 st.markdown("##### Upload a Dataset (CSV or excel)")
 uploaded_df = st.file_uploader("Choose a file", type=["csv", "xlsx"], label_visibility="collapsed")
 
@@ -145,8 +176,12 @@ if df is not None:
         
         filtered_df = df.copy()
         
+        # iterate over columns and display filters for each
         for col in selected_columns:
+
             st.markdown(f"##### Filter by {col}")
+
+            # numeric columns
             if pd.api.types.is_numeric_dtype(df[col]):
                 if df[col].isna().all() or df[col].min() == df[col].max():
                     st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
@@ -160,6 +195,7 @@ if df is not None:
             
                     filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
             
+            # categorical columns
             elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
                 if df[col].isna().all() or df[col].nunique() == 1:
                      st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
@@ -168,6 +204,7 @@ if df is not None:
                     selected_vals = st.multiselect(f"Select values for {col}:", unique_vals, unique_vals)
                     filtered_df = filtered_df[filtered_df[col].isin(selected_vals)]
             
+            # datetime columns
             elif pd.api.types.is_datetime64_any_dtype(df[col]):
                 if df[col].isna().all() or df[col].min() == df[col].max():
                      st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
@@ -186,6 +223,7 @@ else:
     filtered_df = None
 
 
+# display the dataset
 st.markdown("### Dataset")
 if filtered_df is not None and not filtered_df.empty:
     st.write(filtered_df)
@@ -196,7 +234,7 @@ else:
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
    
-# summary section
+# show summary statistics
 st.markdown("### Variable Summary")
 if filtered_df is not None and not filtered_df.empty:
     if not filtered_df.empty:
@@ -229,8 +267,8 @@ st.write("")
 
 
 # natural language dataset exploration
-st.subheader("Natural Language Queries")
-st.write("Use this chat bot to understand the data with antural language queries. Ask questions in natural language about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
+st.subheader("Natural Language Analysis")
+st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
 
 model = AzureChatOpenAI(
     azure_deployment="osaagpt32k",
@@ -240,7 +278,7 @@ model = AzureChatOpenAI(
 )
 
 trimmer = trim_messages(
-    max_tokens=1000, # model max context size is 8192
+    max_tokens=1000,
     strategy="last",
     token_counter=tiktoken_counter,
     include_system=True,
@@ -270,11 +308,15 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-chain = RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) | prompt | model
-
+# first trim the message history, then format with the prompt, then send to the model
+chain = (
+    RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) 
+    | prompt 
+    | model
+)
 config = {"configurable": {"session_id": chat_session_id}}
 
-
+# display the formatted message history
 messages_container = st.container(height=500)
 with messages_container:
     display_chat_history(chat_session_id)
@@ -293,7 +335,6 @@ with st.container():
         else:
             df_string = "There is no DataFrame available."
 
-        
         # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
         # st.write(f"number tokens for used for dataset: {num_tokens}")
 
@@ -344,12 +385,15 @@ with button_container:
     with col1:
         if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (filtered_df is not None and not filtered_df.empty)):
             
+            # make profile report
             profile = ProfileReport(filtered_df, title=f"Profile Report for {df_name}", explorative=True)
 
+            # display profile report
             with report_container:
                 with st.expander("show report"):
                     st_profile_report(profile)
 
+            # download the file
             with download_container:
                 with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
                     profile_file_path = tmp_html.name
@@ -371,15 +415,17 @@ with button_container:
         with st.popover("What are YData Profile Reports?", use_container_width=True):
             st.write("YData Profiling is a Python package that offers a range of features to help with exploratory data analysis. It generates a detailed report that includes descriptive statistics for each variable, such as mean, median, and standard deviation for numerical data, and frequency distribution for categorical data. It will also highlights missing values, detects duplicate rows, and identifies potential outliers. Additionally, it provides correlation matrices to explore relationships between variables, interaction plots to visualize dependencies, and alerts to flag data quality issues like high cardinality or skewness. It also includes visualizations like scatter plots, histograms, and heatmaps, making it easier to spot trends and or anomalies in your dataset.")
 
+
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
+# display the mitosheet
 st.subheader("Mitosheet")
 if filtered_df is not None and not filtered_df.empty:
     new_dfs, code = spreadsheet(filtered_df)
     if code:
         st.markdown("##### Generated Code:")
-        st.write(code)
+        st.code(code)
 else:
     st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
 
@@ -387,6 +433,7 @@ else:
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
+# display the PyGWalker data viz tool
 st.subheader("Data Visualization Tool")
 if filtered_df is not None and not filtered_df.empty:
     init_streamlit_comm()

@@ -14,19 +14,19 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 st.markdown("#### Data Dashboard")
-st.markdown("The Data Dashboard allows users to upload a dataset and get quick access to summary statistics about it, as well as a detailed report with *YData Profiling*. Use the AI chatbot to understand the dataset with natural language questions.")
+st.markdown("Use the Data Dashboard to upload a dataset and get quick access to summary statistics about it, as well as a detailed report with *YData Profiling*. Use the AI chatbot to understand the dataset with natural language questions. Use the Mitosheet Spreadsheet as an embedded spreadsheet to manipulate data and create visualizations. Use the PyGWalker Data Visualization tool to create visualizations from the data.")
 st.page_link("dashboard.py", label="Dashboard", icon=":material/analytics:", use_container_width=True)
 
 st.markdown("#### WorldBank Data Dashboard")
-st.markdown("The WorldBank Data Dashboard allows for exploratory data analysis of the World Bank's Data. Search available indicators by keyword, and select and download data by indicator, country, and time range. Create automatic interactive time series graphs on the selected data.")
+st.markdown("Use the WorldBank Data Dashboard for exploratory data analysis of the World Bank's Data. Search available indicators by keyword, and select and download data by indicator, country, and time range. Create automatic interactive time series graphs on the selected data. Use the AI chatbot to understand the dataset with natural language questions. Use the Mitosheet Spreadsheet as an embedded spreadsheet to manipulate data and create visualizations. Use the PyGWalker Data Visualization tool to create visualizations from the data.")
 st.page_link("wb_dashboard.py", label="WB Dashboard", icon=":material/bar_chart:", use_container_width=True)
 
 st.markdown("#### SDG Data Dashboard")
-st.markdown("The SDG Dashboard allows for exploratory data analysis of the United Nations Sustainable Development Goals DataBase. Explore the 17 sustainable development goals and their corresponding indicators, and select and download data by indicator, country, and time range. Create automatic interactive time series graphs on the selected data.")
+st.markdown("Use the SDG Dashboard for exploratory data analysis of the United Nations Sustainable Development Goals DataBase. Explore the 17 sustainable development goals and their corresponding indicators, and select and download data by indicator, country, and time range. Create automatic interactive time series graphs on the selected data. Use the AI chatbot to understand the dataset with natural language questions. Use the Mitosheet Spreadsheet as an embedded spreadsheet to manipulate data and create visualizations. Use the PyGWalker Data Visualization tool to create visualizations from the data.")
 st.page_link("sdg_dashboard.py", label="SDG Dashboard", icon=":material/show_chart:", use_container_width=True)
 
 st.markdown("#### Contradictory Analysis Tool")
-st.markdown("The Contradictory Analysis Tool allows you to check if your analysis contradicts any previous analysis in OSAA's publications. This tool uses large language models with retrieval augmented generation and therefore may provide wrong answers.")
+st.markdown("Use the Contradictory Analysis Tool to check if analysis contradicts any previous in OSAA's publications. This tool uses large language models with retrieval augmented generation and therefore may provide wrong answers, so alwayds double check.")
 st.page_link("check_analysis.py", label="Contradictory Analysis Tool", icon=":material/check:", use_container_width=True)
 
 
