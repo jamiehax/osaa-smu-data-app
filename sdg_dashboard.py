@@ -166,10 +166,6 @@ st.markdown("#### Select Countries")
 country_code_url = "v1/sdg/GeoArea/List"
 country_code_data = get_data(f"{BASE_URL}/{country_code_url}")
 
-# if not isinstance(country_code_data, Exception):
-#     selected_country_code_names = st.multiselect("select countries", [f"{country_code['geoAreaCode']} - {country_code['geoAreaName']}" for country_code in country_code_data], label_visibility="collapsed")
-#     selected_country_codes = [entry.split(' - ')[0] for entry in selected_country_code_names]
-#     st.write(selected_country_codes)
 
 if not isinstance(country_code_data, Exception):
 
@@ -296,7 +292,7 @@ if st.session_state.sdg_df is not None:
     if not st.session_state.sdg_df.empty:
         st.dataframe(st.session_state.sdg_df)
     else:
-        st.write("no data available for the selection")
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
 
 
 
@@ -391,7 +387,7 @@ def show_summary():
         else:
             st.write("no data to present summary statistics on.")
     else:
-        st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
 show_summary()
 
 st.markdown("<hr>", unsafe_allow_html=True)
@@ -583,5 +579,5 @@ def show_pygwalker():
 
         components.html(get_pyg_html(st.session_state.sdg_df), width=1300, height=1000, scrolling=True)
     else:
-        st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
 show_pygwalker()

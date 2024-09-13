@@ -21,6 +21,7 @@ import tiktoken
 from langchain_core.messages import BaseMessage, ToolMessage
 from typing import List
 
+
 # cached functions for retreiving data
 @st.cache_data
 def get_databases():
@@ -407,7 +408,7 @@ def show_summary():
         else:
             st.write("no data to present summary statistics on.")
     else:
-        st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
 show_summary()
 
 
@@ -603,5 +604,5 @@ def show_pygwalker():
 
         components.html(get_pyg_html(st.session_state.wb_df), width=1300, height=1000, scrolling=True)
     else:
-        st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+        st.write("data not available for the selected indicator(s), countries, and year(s).")
 show_pygwalker()
