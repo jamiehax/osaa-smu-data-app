@@ -25,12 +25,8 @@ def check_password():
         return True
 
     # show input for password.
-    col1, col2 = st.columns(2)
-    with col1:
-        st.image("content/OSAA-Data-logo.svg")
+    st.image("content/OSAA-Data-logo.svg")
 
-
-    st.title("SMU's Data App")
     st.markdown("Welcome to the Office of the Speical Advisor to Africa's Strategic Management Unit's Data App. Please enter the app password to access the data app.")
 
     st.text_input(
