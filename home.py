@@ -38,8 +38,8 @@ st.page_link("check_analysis.py", label="Contradictory Analysis Tool", icon=":ma
 # st.markdown("The Data Visualization tool uses *PyGWalker* to automatically create data visualizations like graphs and charts on uploaded datasets.")
 # st.page_link("visualizations.py", label="Data Visulization Tool", icon=":material/insert_chart:", use_container_width=True)
 
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
+# st.markdown("<hr>", unsafe_allow_html=True)
+# st.write("")
 
 # st.header("Settings")
 # if st.button("refresh database", use_container_width=True, type="primary"):
