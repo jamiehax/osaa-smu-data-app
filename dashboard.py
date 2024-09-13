@@ -420,7 +420,7 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 # display the mitosheet
-st.subheader("Mitosheet")
+st.subheader("Mitosheet Spreadsheet")
 if filtered_df is not None and not filtered_df.empty:
     new_dfs, code = spreadsheet(filtered_df)
     if code:
@@ -434,7 +434,7 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 # display the PyGWalker data viz tool
-st.subheader("Data Visualization Tool")
+st.subheader("PyGWalker Data Visualization Tool")
 if filtered_df is not None and not filtered_df.empty:
     init_streamlit_comm()
     @st.cache_resource

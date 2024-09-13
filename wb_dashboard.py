@@ -464,7 +464,7 @@ st.write("")
 
 @st.fragment
 def show_mitosheet():
-    st.subheader("Mitosheet")
+    st.subheader("Mitosheet Spreadsheet")
     if st.session_state.wb_df is not None and not st.session_state.wb_df.empty:
         new_dfs, code = spreadsheet(st.session_state.wb_df)
         if code:
@@ -481,7 +481,7 @@ st.write("")
 
 @st.fragment
 def show_pygwalker():
-    st.subheader("Data Visualization Tool")
+    st.subheader("PyGWalker Data Visualization Tool")
     if st.session_state.wb_df is not None and not st.session_state.wb_df.empty:
         init_streamlit_comm()
         @st.cache_resource
