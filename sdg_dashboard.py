@@ -512,40 +512,43 @@ def show_report():
     report_container = st.container()
     download_container = st.container()
 
-    with button_container:
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (st.session_state.sdg_df is not None and not st.session_state.sdg_df.empty)):
-                
-                # make profile report
-                profile = ProfileReport(st.session_state.sdg_df, title="Profile Report for UNSDG Data", explorative=True)
-
-                # display profile report
-                with report_container:
-                    with st.expander("show report"):
-                        st_profile_report(profile)
-
-                # download the file
-                with download_container:
-                    with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
-                        profile_file_path = tmp_html.name
-                        profile.to_file(profile_file_path)
+    try:
+        with button_container:
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (st.session_state.sdg_df is not None and not st.session_state.sdg_df.empty)):
                     
-                    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
-                        pdf_file_path = tmp_pdf.name
-                    
-                    pdfkit.from_file(profile_file_path, pdf_file_path)
+                    # make profile report
+                    profile = ProfileReport(st.session_state.sdg_df, title="Profile Report for UNSDG Data", explorative=True)
 
-                    with open(pdf_file_path, 'rb') as f:
-                        st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True, type="primary")
+                    # display profile report
+                    with report_container:
+                        with st.expander("show report"):
+                            st_profile_report(profile)
 
-                    # clean up temporary files
-                    os.remove(profile_file_path)
-                    os.remove(pdf_file_path)
+                    # download the file
+                    with download_container:
+                        with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
+                            profile_file_path = tmp_html.name
+                            profile.to_file(profile_file_path)
+                        
+                        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+                            pdf_file_path = tmp_pdf.name
+                        
+                        pdfkit.from_file(profile_file_path, pdf_file_path)
 
-        with col2:
-            with st.popover("What are YData Profile Reports?", use_container_width=True):
-                st.write("YData Profiling is a Python package that offers a range of features to help with exploratory data analysis. It generates a detailed report that includes descriptive statistics for each variable, such as mean, median, and standard deviation for numerical data, and frequency distribution for categorical data. It will also highlights missing values, detects duplicate rows, and identifies potential outliers. Additionally, it provides correlation matrices to explore relationships between variables, interaction plots to visualize dependencies, and alerts to flag data quality issues like high cardinality or skewness. It also includes visualizations like scatter plots, histograms, and heatmaps, making it easier to spot trends and or anomalies in your dataset.")
+                        with open(pdf_file_path, 'rb') as f:
+                            st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True, type="primary")
+
+                        # clean up temporary files
+                        os.remove(profile_file_path)
+                        os.remove(pdf_file_path)
+
+            with col2:
+                with st.popover("What are YData Profile Reports?", use_container_width=True):
+                    st.write("YData Profiling is a Python package that offers a range of features to help with exploratory data analysis. It generates a detailed report that includes descriptive statistics for each variable, such as mean, median, and standard deviation for numerical data, and frequency distribution for categorical data. It will also highlights missing values, detects duplicate rows, and identifies potential outliers. Additionally, it provides correlation matrices to explore relationships between variables, interaction plots to visualize dependencies, and alerts to flag data quality issues like high cardinality or skewness. It also includes visualizations like scatter plots, histograms, and heatmaps, making it easier to spot trends and or anomalies in your dataset.")
+    except Exception as e:
+        st.error(f"Error generating report:\n\n{e}")
 show_report()
 
 
