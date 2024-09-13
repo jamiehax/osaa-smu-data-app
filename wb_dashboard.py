@@ -227,7 +227,7 @@ selected_years = st.slider( "Select a range of years:", min_value=1960, max_valu
 # get world bank data
 try:
     if st.button("get data", type='primary', use_container_width=True):
-        wb_df = wb.data.DataFrame(selected_indicators, time=list(range(selected_years[0], selected_years[1]))).reset_index()
+        wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
 
         # deal with edge cases where there is no economy column
         if 'economy' not in wb_df.columns:
@@ -250,10 +250,8 @@ try:
 
         # reorder columns
         column_order = ['Indicator', 'Indicator Description', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in wb_df.columns if col.startswith('YR')]
-        wb_df = wb_df[column_order]
+        df = wb_df[column_order]
 
-        # subset df to be only selected countries
-        df = wb_df[wb_df['iso3'].isin(selected_iso3_codes)]
         st.dataframe(df)
         st.session_state.wb_df = df
 
@@ -274,6 +272,8 @@ st.write("")
 def show_plots():
     st.subheader("Explore Data")
     if st.session_state.wb_df is not None:
+
+        # country time series chart
         df_melted = st.session_state.wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
         df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
         
@@ -296,17 +296,29 @@ def show_plots():
             st.error(f"Error generating Time Series Graph:\n\n{e}")
 
 
-    # plot region line chart
-        
-        region_df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
-        region_df_melted['Year'] = region_df_melted['Year'].str.extract('(\d{4})').astype(int)
-        
-        region_avg_df = region_df_melted.groupby(['Indicator', 'Region Name', 'Year'])['Value'].mean().reset_index()
-        world_avg_df = region_avg_df.groupby(['Indicator', 'Year'])['Value'].mean().reset_index()
+        # region line chart
+        with st.spinner("getting region data"):
+            region_df = wb.data.DataFrame(selected_indicators, time=list(range(selected_years[0], selected_years[1]))).reset_index()
 
-        world_avg_df['Region Name'] = 'World'
-        world_avg_df.rename(columns={'Value': 'Value'}, inplace=True)
-        region_avg_df = pd.concat([region_avg_df, world_avg_df], ignore_index=True)
+            if 'series' not in region_df.columns:
+                region_df['series'] = selected_indicators[0]
+
+            # add country reference codes
+            region_df = region_df.merge(iso3_reference_df[['Region Name', 'Sub-region Name', 'iso3']], left_on='economy', right_on='iso3', how='left')
+
+            # rename and drop duplicate columns
+            region_df.drop(columns=['iso3'], inplace=True)
+            region_df = region_df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
+            
+            region_df_melted = region_df.melt(id_vars=['Indicator', 'Region Name', 'Sub-region Name', 'iso3'], var_name='Year', value_name='Value')
+            region_df_melted['Year'] = region_df_melted['Year'].str.extract('(\d{4})').astype(int)
+            
+            region_avg_df = region_df_melted.groupby(['Indicator', 'Region Name', 'Year'])['Value'].mean().reset_index()
+            world_avg_df = region_avg_df.groupby(['Indicator', 'Year'])['Value'].mean().reset_index()
+
+            world_avg_df['Region Name'] = 'World'
+            world_avg_df.rename(columns={'Value': 'Value'}, inplace=True)
+            region_avg_df = pd.concat([region_avg_df, world_avg_df], ignore_index=True)
 
         try:
             fig = px.line(
@@ -325,18 +337,20 @@ def show_plots():
         except Exception as e:
             st.error(f"Error generating Time Series Graph:\n\n{e}")
 
+
+        # map graph
+        st.markdown("###### Choose an Indicator to show on the map")
+        indicator_descriptions = df_melted['Indicator Description'].unique()
+        selected_indicator = st.selectbox("select indicator to show on map:", indicator_descriptions, label_visibility="collapsed")
+        indicator_description_code_map = {d['value']: d['id'] for d in query_result}
+        selected_code = indicator_description_code_map[selected_indicator]
+        indicator_df = df_melted[(df_melted['Indicator'] == selected_code)]
+
+        most_recent_year_with_value = indicator_df.dropna(subset=['Value'])
+        most_recent_year = most_recent_year_with_value['Year'].max()
+        map_df = most_recent_year_with_value[most_recent_year_with_value['Year'] == most_recent_year]
+
         try:
-            st.markdown("###### Choose an Indicator to show on the map")
-            indicator_descriptions = df_melted['Indicator Description'].unique()
-            selected_indicator = st.selectbox("select indicator to show on map:", indicator_descriptions, label_visibility="collapsed")
-            indicator_description_code_map = {d['value']: d['id'] for d in query_result}
-            selected_code = indicator_description_code_map[selected_indicator]
-            indicator_df = df_melted[(df_melted['Indicator'] == selected_code)]
-
-            most_recent_year_with_value = indicator_df.dropna(subset=['Value'])
-            most_recent_year = most_recent_year_with_value['Year'].max()
-            map_df = most_recent_year_with_value[most_recent_year_with_value['Year'] == most_recent_year]
-
             fig = px.choropleth(
                 map_df,
                 locations='iso3',
@@ -516,40 +530,43 @@ def show_report():
     report_container = st.container()
     download_container = st.container()
 
-    with button_container:
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (st.session_state.wb_df is not None and not st.session_state.wb_df.empty)):
-                
-                # make profile report
-                profile = ProfileReport(st.session_state.wb_df, title="Profile Report for UNSDG Data", explorative=True)
-
-                # display profile report
-                with report_container:
-                    with st.expander("show report"):
-                        st_profile_report(profile)
-
-                # download the file
-                with download_container:
-                    with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
-                        profile_file_path = tmp_html.name
-                        profile.to_file(profile_file_path)
+    try:
+        with button_container:
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (st.session_state.wb_df is not None and not st.session_state.wb_df.empty)):
                     
-                    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
-                        pdf_file_path = tmp_pdf.name
-                    
-                    pdfkit.from_file(profile_file_path, pdf_file_path)
+                    # make profile report
+                    profile = ProfileReport(st.session_state.wb_df, title="Profile Report for UNSDG Data", explorative=True)
 
-                    with open(pdf_file_path, 'rb') as f:
-                        st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True, type="primary")
+                    # display profile report
+                    with report_container:
+                        with st.expander("show report"):
+                            st_profile_report(profile)
 
-                    # clean up temporary files
-                    os.remove(profile_file_path)
-                    os.remove(pdf_file_path)
+                    # download the file
+                    with download_container:
+                        with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
+                            profile_file_path = tmp_html.name
+                            profile.to_file(profile_file_path)
+                        
+                        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
+                            pdf_file_path = tmp_pdf.name
+                        
+                        pdfkit.from_file(profile_file_path, pdf_file_path)
 
-        with col2:
-            with st.popover("What are YData Profile Reports?", use_container_width=True):
-                st.write("YData Profiling is a Python package that offers a range of features to help with exploratory data analysis. It generates a detailed report that includes descriptive statistics for each variable, such as mean, median, and standard deviation for numerical data, and frequency distribution for categorical data. It will also highlights missing values, detects duplicate rows, and identifies potential outliers. Additionally, it provides correlation matrices to explore relationships between variables, interaction plots to visualize dependencies, and alerts to flag data quality issues like high cardinality or skewness. It also includes visualizations like scatter plots, histograms, and heatmaps, making it easier to spot trends and or anomalies in your dataset.")
+                        with open(pdf_file_path, 'rb') as f:
+                            st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True, type="primary")
+
+                        # clean up temporary files
+                        os.remove(profile_file_path)
+                        os.remove(pdf_file_path)
+
+            with col2:
+                with st.popover("What are YData Profile Reports?", use_container_width=True):
+                    st.write("YData Profiling is a Python package that offers a range of features to help with exploratory data analysis. It generates a detailed report that includes descriptive statistics for each variable, such as mean, median, and standard deviation for numerical data, and frequency distribution for categorical data. It will also highlights missing values, detects duplicate rows, and identifies potential outliers. Additionally, it provides correlation matrices to explore relationships between variables, interaction plots to visualize dependencies, and alerts to flag data quality issues like high cardinality or skewness. It also includes visualizations like scatter plots, histograms, and heatmaps, making it easier to spot trends and or anomalies in your dataset.")
+    except Exception as e:
+        st.error(f"Error generating report:\n\n{e}")
 show_report()
 
 
