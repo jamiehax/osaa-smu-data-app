@@ -37,7 +37,7 @@ def check_password():
     st.write("")
 
     st.text_input(
-        "Password", type="password", on_change=password_entered, key="password"
+        "Password", placeholder="enter the app password...", on_change=password_entered, key="password"
     )
 
     if "password_correct" in st.session_state:
