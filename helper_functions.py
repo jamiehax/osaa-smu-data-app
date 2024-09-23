@@ -174,9 +174,12 @@ def make_vectorstore():
 
 
 def add_docs(vectorstore):
+    
+    progress_bar = st.progress(0, text="adding documents")
+
     doc_dir_path = "content/rag_documents"
-    doc_files = [f for f in os.listdir(doc_dir_path) if f.endswith('.pdf')]
-    for doc_file in doc_files:
+    doc_files = [f for f in os.listdir(doc_dir_path) if f.endswith('.pdf')]    
+    for i, doc_file in enumerate(doc_files):
         doc_path = os.path.join(doc_dir_path, doc_file)
         loader = PyPDFLoader(doc_path)
         doc = loader.load()
@@ -197,6 +200,9 @@ def add_docs(vectorstore):
             }
 
         vectorstore.add_documents(splits)
+
+        progress_bar.progress((i + 1) / 37, text="adding documents")
+        st.write(f"done with {source_name}")
 
 
 def get_retriever(db_path):
