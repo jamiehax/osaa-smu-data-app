@@ -142,15 +142,15 @@ st.subheader("Select and Filter a Dataset")
 st.write("Either search through existing datasets or upload your own dataset as a CSV or Excel file.")
 
 
-# select a dataset from the database
-st.markdown("##### Search Datasets")
-dataset_names = get_dataset_names(st.session_state.db_path)
-df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
+# # select a dataset from the database
+# st.markdown("##### Search Datasets")
+# dataset_names = get_dataset_names(st.session_state.db_path)
+# df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
-if df_name is not None:
-    st.session_state.df = get_df(st.session_state.db_path, df_name)
-else:
-    st.session_state.df = None
+# if df_name is not None:
+#     st.session_state.df = get_df(st.session_state.db_path, df_name)
+# else:
+#     st.session_state.df = None
 
 
 # select a a dataset by uploading it
