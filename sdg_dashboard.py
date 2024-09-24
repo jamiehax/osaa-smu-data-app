@@ -116,6 +116,8 @@ if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 if 'sdg_df' not in st.session_state:
     st.session_state['sdg_df'] = None
+if 'sdg_df_wide' not in st.session_state:
+    st.session_state['sdg_df_wide'] = None
 
 
 # base url for SDG requests
@@ -279,6 +281,9 @@ with col2:
 
             st.session_state.sdg_df = df
 
+            # make wide format version for variable summary
+            st.session_state.sdg_df_wide = df.pivot(index='Category', columns='Year', values='Value')
+
         else:
             df = None
             st.session_state.sdg_df = df
@@ -363,9 +368,9 @@ def show_summary():
     """
 
     st.markdown("### Variable Summary")
-    if st.session_state.sdg_df is not None and not st.session_state.sdg_df.empty:
-        if not st.session_state.sdg_df.empty:
-            summary = st.session_state.sdg_df.describe()
+    if st.session_state.sdg_df_wide is not None and not st.session_state.sdg_df_wide.empty:
+        if not st.session_state.sdg_df_wide.empty:
+            summary = st.session_state.sdg_df_wide.describe()
 
             columns = summary.columns
             tabs = st.tabs(columns.to_list())
