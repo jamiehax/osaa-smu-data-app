@@ -139,7 +139,9 @@ if 'chat_history' not in st.session_state:
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 if 'wb_df' not in st.session_state:
-    st.session_state['sdg_df'] = None
+    st.session_state['wb_df'] = None
+if 'wb_df_melted' not in st.session_state:
+    st.session_state['wb_df_melted'] = None
 
 chat_session_id = 'wb-dashboard-id'
 
@@ -253,17 +255,26 @@ try:
         column_order = ['Indicator', 'Indicator Description', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in wb_df.columns if col.startswith('YR')]
         df = wb_df[column_order]
 
+        # create melted df
+        df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
+        df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
+        st.session_state.wb_df_melted = df_melted
+
         st.dataframe(df)
         st.session_state.wb_df = df
 
     else:
         df = None
+        df_melted = None
         st.session_state.wb_df = df
+        st.session_state.wb_df_melted = df_melted
 
 except Exception as e:
     st.error(f"no data retrieved. this is most likely due to blank indicator, country, or time values. please ensure there are values for the indicator, country, and time range. \n\n Error: {e}")
     df = None
+    df_melted = None
     st.session_state.wb_df = df
+    st.session_state.wb_df_melted = df_melted
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
@@ -272,16 +283,12 @@ st.write("")
 @st.fragment
 def show_plots():
     st.subheader("Explore Data")
-    if st.session_state.wb_df is not None:
-
-        # country time series chart
-        df_melted = st.session_state.wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
-        df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
+    if st.session_state.wb_df_melted is not None:
         
         # plot country indicators
         try:
             fig = px.line(
-                df_melted, 
+                st.session_state.wb_df_melted, 
                 x='Year', 
                 y='Value', 
                 color='Country or Area', 
@@ -295,7 +302,6 @@ def show_plots():
 
         except Exception as e:
             st.error(f"Error generating Time Series Graph:\n\n{e}")
-
 
         # region line chart
         with st.spinner("getting region data"):
@@ -538,7 +544,7 @@ def show_report():
                 if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (st.session_state.wb_df is not None and not st.session_state.wb_df.empty)):
                     
                     # make profile report
-                    profile = ProfileReport(st.session_state.wb_df, title="Profile Report for UNSDG Data", explorative=True)
+                    profile = ProfileReport(st.session_state.wb_df, title="Profile Report for WorldBank Data", explorative=True)
 
                     # display profile report
                     with report_container:
@@ -578,8 +584,8 @@ st.write("")
 @st.fragment
 def show_mitosheet():
     st.subheader("Mitosheet Spreadsheet")
-    if st.session_state.wb_df is not None and not st.session_state.wb_df.empty:
-        new_dfs, code = spreadsheet(st.session_state.wb_df)
+    if st.session_state.wb_df_melted is not None and not st.session_state.wb_df_melted.empty:
+        new_dfs, code = spreadsheet(st.session_state.wb_df_melted)
         if code:
             st.markdown("##### Generated Code:")
             st.code(code)
@@ -595,14 +601,14 @@ st.write("")
 @st.fragment
 def show_pygwalker():
     st.subheader("PyGWalker Data Visualization Tool")
-    if st.session_state.wb_df is not None and not st.session_state.wb_df.empty:
+    if st.session_state.wb_df_melted is not None and not st.session_state.wb_df_melted.empty:
         init_streamlit_comm()
         @st.cache_resource
         def get_pyg_html(df: pd.DataFrame) -> str:
-            html = get_streamlit_html(st.session_state.wb_df, spec="./gw0.json", use_kernel_calc=True, debug=False)
+            html = get_streamlit_html(st.session_state.wb_df_melted, spec="./gw0.json", use_kernel_calc=True, debug=False)
             return html
 
-        components.html(get_pyg_html(st.session_state.wb_df), width=1300, height=1000, scrolling=True)
+        components.html(get_pyg_html(st.session_state.wb_df_melted), width=1300, height=1000, scrolling=True)
     else:
         st.write("data not available for the selected indicator(s), countries, and year(s).")
 show_pygwalker()
