@@ -116,8 +116,6 @@ if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 if 'sdg_df' not in st.session_state:
     st.session_state['sdg_df'] = None
-if 'sdg_df_wide' not in st.session_state:
-    st.session_state['sdg_df_wide'] = None
 
 
 # base url for SDG requests
@@ -276,13 +274,10 @@ with col2:
             df['Year'] = df['Year'].astype(int)
 
             # reorder columns
-            column_order = ['Indicator', 'Series', 'Year', 'Country or Area', 'Value', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49', 'Series Description'] + [col for col in df.columns if col.startswith('YR')]
+            column_order = ['Indicator', 'Series', 'Year', 'Country or Area', 'Value', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49', 'Series Description']
             df = df[column_order]
 
             st.session_state.sdg_df = df
-
-            # make wide format version for variable summary
-            st.session_state.sdg_df_wide = df.pivot(index='Category', columns='Year', values='Value')
 
         else:
             df = None
@@ -368,9 +363,16 @@ def show_summary():
     """
 
     st.markdown("### Variable Summary")
-    if st.session_state.sdg_df_wide is not None and not st.session_state.sdg_df_wide.empty:
-        if not st.session_state.sdg_df_wide.empty:
-            summary = st.session_state.sdg_df_wide.describe()
+    if st.session_state.sdg_df is not None:
+        if not st.session_state.sdg_df.empty:
+           
+            # make wide format version for variable summary, averaging duplicate indicators
+            grouped_df = st.session_state.sdg_df.groupby(['Indicator', 'Series', 'Country or Area', 'Year', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49', 'Series Description']).agg({'Value': 'mean'}).reset_index()
+            index_columns = ['Indicator', 'Series', 'Country or Area']
+            sdg_df_wide = grouped_df.pivot(index=index_columns, columns='Year', values='Value')
+            sdg_df_wide.columns = sdg_df_wide.columns.astype(str)
+
+            summary = sdg_df_wide.describe()
 
             columns = summary.columns
             tabs = st.tabs(columns.to_list())
