@@ -573,7 +573,8 @@ def show_report():
                 with st.popover("What are YData Profile Reports?", use_container_width=True):
                     st.write("YData Profiling is a Python package that offers a range of features to help with exploratory data analysis. It generates a detailed report that includes descriptive statistics for each variable, such as mean, median, and standard deviation for numerical data, and frequency distribution for categorical data. It will also highlights missing values, detects duplicate rows, and identifies potential outliers. Additionally, it provides correlation matrices to explore relationships between variables, interaction plots to visualize dependencies, and alerts to flag data quality issues like high cardinality or skewness. It also includes visualizations like scatter plots, histograms, and heatmaps, making it easier to spot trends and or anomalies in your dataset.")
     except Exception as e:
-        st.error(f"Error generating report:\n\n{e}")
+        xa1 = 0
+        # st.error(f"Error generating report:\n\n{e}")
 show_report()
 
 
