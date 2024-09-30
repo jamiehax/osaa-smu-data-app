@@ -58,7 +58,8 @@ dashboard_page = st.Page("dashboard.py", title="Data Dashboard", icon=":material
 wb_dashboard_page = st.Page("wb_dashboard.py", title="WorldBank Data Dashboard", icon=":material/bar_chart:")
 sdg_dashboard_page = st.Page("sdg_dashboard.py", title="SDG Data Dashboard", icon=":material/show_chart:")
 contradictory_analysis_page = st.Page("check_analysis.py", title="Contradictory Analysis Tool", icon=":material/check:")
+chatbot_page = st.Page("chatbot.py", title="OSAA General Chatbot", icon=":material/chat:")
 
-pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, contradictory_analysis_page])
+pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, contradictory_analysis_page, chatbot_page])
 st.set_page_config(page_title="SMU Data App", page_icon=":material/home:", layout="wide")
 pg.run()

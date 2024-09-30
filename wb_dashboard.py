@@ -143,7 +143,7 @@ if 'wb_df' not in st.session_state:
 if 'wb_df_melted' not in st.session_state:
     st.session_state['wb_df_melted'] = None
 
-chat_session_id = 'wb-dashboard-id'
+chat_session_id = 'wb-dashboard-chat-id'
 
 # title and introduction
 st.title("OSAA SMU's World Bank Data Dashboard")

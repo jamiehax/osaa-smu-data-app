@@ -19,7 +19,7 @@ if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
 
 # chat hsitory id for check analysis page
-chat_session_id = 'check-analysis-id'
+chat_session_id = 'check-analysis-chat-id'
 
 
 # functions for the chatbot tool
@@ -40,7 +40,7 @@ def display_chat_history(session_id: str) -> None:
     messages = st.session_state.formatted_chat_history.get(session_id, None)
     if messages is None:
         st.session_state.formatted_chat_history[session_id] = []
-        intro_message = "Hi! I am a chatbot assistant trained to help you understand your data. Ask me questions about your currently selected dataset in natural language and I will answer them!"
+        intro_message = "Hi! I am an LLM chatbot assistant with access to OSAA publications. I can answer whether provided analysis contradicts any analysis present in these publications."
         st.chat_message("assistant").markdown(intro_message)
         st.session_state.formatted_chat_history[session_id].append({"role": "assistant", "content": intro_message})
     else:   

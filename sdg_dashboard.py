@@ -107,7 +107,7 @@ def summarize_dataframe(df, max_rows=5, max_categories=25):
     return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
 
 
-chat_session_id = 'sdg-dashboard-id'
+chat_session_id = 'sdg-dashboard-chat-id'
 
 # create session states
 if 'chat_history' not in st.session_state:

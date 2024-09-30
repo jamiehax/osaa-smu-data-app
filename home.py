@@ -29,6 +29,10 @@ st.markdown("#### Contradictory Analysis Tool")
 st.markdown("Use the Contradictory Analysis Tool to check if analysis contradicts any previous in OSAA's publications. This tool uses large language models with retrieval augmented generation and therefore may provide wrong answers, so alwayds double check.")
 st.page_link("check_analysis.py", label="Contradictory Analysis Tool", icon=":material/check:", use_container_width=True)
 
+st.markdown("#### OSAA General Chatbot")
+st.markdown("The OSAA General Chatbot is similar to ChatGPT, except it has context specific to OSAA. Use it for questions specific to OSAA work.")
+st.page_link("chatbot.py", label="OSAA General Chatbot", icon=":material/chat:", use_container_width=True)
+
 # st.markdown("<hr>", unsafe_allow_html=True)
 # st.write("")
 
