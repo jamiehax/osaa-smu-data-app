@@ -13,14 +13,14 @@ def check_password():
         Checks whether a password entered by the user is correct.
         """
 
-        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # remove the password
+        if hmac.compare_digest(st.session_state["app_password"], st.secrets["app_password"]):
+            st.session_state["app_password_correct"] = True
+            del st.session_state["app_password"]  # remove the password
         else:
-            st.session_state["password_correct"] = False
+            st.session_state["app_password_correct"] = False
 
     # return True if the password is validated.
-    if st.session_state.get("password_correct", False):
+    if st.session_state.get("app_password_correct", False):
         return True
 
     # show input for password.
@@ -32,11 +32,11 @@ def check_password():
         "Password",
         placeholder="enter the app password...",
         on_change=password_entered,
-        key="password",
+        key="app_password",
         label_visibility="collapsed"
     )
 
-    if "password_correct" in st.session_state:
+    if "app_password_correct" in st.session_state:
         st.error("😕 Password incorrect")
     return False
 
@@ -60,6 +60,6 @@ chatbot_page = st.Page("chatbot.py", title="OSAA General Chatbot", icon=":materi
 contradictory_analysis_page = st.Page("check_analysis.py", title="Contradictory Analysis Tool", icon=":material/check:")
 pid_checker_page = st.Page("pid_checker.py", title="PID Checker", icon=":material/task_alt:")
 
-pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, chatbot_page, contradictory_analysis_page])
+pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, chatbot_page, contradictory_analysis_page, pid_checker_page])
 st.set_page_config(page_title="SMU Data App", page_icon=":material/home:", layout="wide")
 pg.run()
