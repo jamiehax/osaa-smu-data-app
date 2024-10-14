@@ -1,4 +1,3 @@
-
 import streamlit as st
 from helper_functions import get_retriever, make_vectorstore
 from langchain_openai import AzureChatOpenAI
@@ -71,7 +70,7 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 llm = AzureChatOpenAI(
-    azure_deployment="gpt35osaa",
+    azure_deployment="osaagpt32k",
     api_key=st.secrets['azure'],
     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     openai_api_version="2024-05-01-preview"

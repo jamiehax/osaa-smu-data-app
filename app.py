@@ -2,7 +2,6 @@ import streamlit as st
 from helper_functions import setup_db
 import hmac
 
-
 # check password
 def check_password():
     """
@@ -57,9 +56,10 @@ home_page = st.Page("home.py", title="Home", icon=":material/home:")
 dashboard_page = st.Page("dashboard.py", title="Data Dashboard", icon=":material/analytics:")
 wb_dashboard_page = st.Page("wb_dashboard.py", title="WorldBank Data Dashboard", icon=":material/bar_chart:")
 sdg_dashboard_page = st.Page("sdg_dashboard.py", title="SDG Data Dashboard", icon=":material/show_chart:")
-contradictory_analysis_page = st.Page("check_analysis.py", title="Contradictory Analysis Tool", icon=":material/check:")
 chatbot_page = st.Page("chatbot.py", title="OSAA General Chatbot", icon=":material/chat:")
+contradictory_analysis_page = st.Page("check_analysis.py", title="Contradictory Analysis Tool", icon=":material/check:")
+pid_checker_page = st.Page("pid_checker.py", title="PID Checker", icon=":material/task_alt:")
 
-pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, contradictory_analysis_page, chatbot_page])
+pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, chatbot_page, contradictory_analysis_page, pid_checker_page])
 st.set_page_config(page_title="SMU Data App", page_icon=":material/home:", layout="wide")
 pg.run()
