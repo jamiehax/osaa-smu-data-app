@@ -2,7 +2,6 @@ import streamlit as st
 from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
 from pypdf import PdfReader
 from docx import Document
 import textract
@@ -383,7 +382,7 @@ prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are an assistant. Your task is to determine whether the uploaded Project Initiation Document (PID) aligns with the Criteria. The Criteria is broken into 7 sections, each with its own sub-points. When evaluating a PID agaisnt the Criteria, evaluate it section by section. Each PID belongs to a cluster, and you will also get a Thematic Description of the cluster and Strategic Guidance for the cluster that PID belongs to. Use the Thematic Description and Strategic Guidance to determine if the PID aligns with the Criteria. If the PID aligns with the Criteria based on the Thematic Description and Strategic Guidance for the cluster, clearly state that it does and provide reasons for each section and its sub-points. If the document does not align with the Criteria based on the Thematic Description and Strategic Guidance for the cluster, cleary state that it does not and provide reasons for each section and its sub-points."
+            "You are an assistant. Your task is to determine whether the uploaded Project Initiation Document (PID) aligns with the criteria. The criteria is broken into 7 sections, each with its own sub-points. When evaluating a PID agaisnt the criteria, evaluate it section by section. Indicate where the PID aligns with the criteria and where it does not. Each PID belongs to a cluster, and you will also get a thematic description of the cluster and strategic guidance for the cluster that PID belongs to. Use the thematic description and strategic guidance to determine if the PID aligns with the criteria. If the PID aligns with the criteria based on the thematic description and strategic guidance for the cluster, clearly state that it does and provide reasons for each section and its sub-points. If the document does not align with the criteria based on the thematic description and strategic guidance for the cluster, cleary state that it does not and provide reasons for each section and its sub-points."
         ),
         (
             "human",
@@ -391,32 +390,35 @@ prompt = ChatPromptTemplate.from_messages(
         ),
         (
             "human",
-            "Criteria: {criteria}"
+            "criteria: {criteria}"
         ),
         (
             "human",
-            "Thematic Description: {thematic_description}"
+            "thematic description: {thematic_description}"
         ),
         (
             "human",
-            "Strategic Guidance: {strategic_guidance}"
+            "strategic guidance: {strategic_guidance}"
         )
     ]
 )
 
 
 # make chain
-inputs = {
-    "document": extracted_text, 
-    "criteria": criteria, 
-    "thematic_description": thematic_description, 
-    "strategic_guidance": strategic_guidance
-}
 chain = (prompt | llm | StrOutputParser())
 
 
 if st.button("Check PID", use_container_width=True, type="primary"):
 
+    # get inputs
+    inputs = {
+        "document": extracted_text, 
+        "criteria": criteria, 
+        "thematic_description": thematic_description, 
+        "strategic_guidance": strategic_guidance
+    }
+
+    # get response
     with st.spinner("checking PID..."):
         response = chain.invoke(inputs)
 
