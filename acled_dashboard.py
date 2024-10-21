@@ -168,7 +168,6 @@ if st.button("Get Data", type="primary", use_container_width=True):
     # construct API request URL
 
     api_key = st.secrets['acled_key']
-    # email = "james.hackney@un.org"
     email = st.secrets['acled_email']
 
     BASE_URL = f"https://api.acleddata.com/acled/read?key={api_key}&email={email}"
