@@ -150,8 +150,9 @@ with button_container:
 
         st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": prompt})
 
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        with messages_container:
+            with st.chat_message("user"):
+                st.markdown(prompt)
 
         # get reponse
         with_message_history = RunnableWithMessageHistory(
@@ -167,12 +168,13 @@ with button_container:
             config=config
         )
 
-        with st.chat_message("assistant"):
-            try:
-                response = st.write_stream(response_generator)
-            except Exception as e:
-                response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
-                st.write(response)
+        with messages_container:
+            with st.chat_message("assistant"):
+                try:
+                    response = st.write_stream(response_generator)
+                except Exception as e:
+                    response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
+                    st.write(response)
 
         st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
 

@@ -22,8 +22,12 @@ st.markdown("Use the WorldBank Data Dashboard for exploratory data analysis of t
 st.page_link("wb_dashboard.py", label="WB Dashboard", icon=":material/bar_chart:", use_container_width=True)
 
 st.markdown("#### SDG Data Dashboard")
-st.markdown("Use the SDG Dashboard for exploratory data analysis of the United Nations Sustainable Development Goals DataBase. Explore the 17 sustainable development goals and their corresponding indicators, and select and download data by indicator, country, and time range. Create automatic interactive time series graphs on the selected data. Use the AI chatbot to understand the dataset with natural language questions. Use the Mitosheet Spreadsheet as an embedded spreadsheet to manipulate data and create visualizations. Use the PyGWalker Data Visualization tool to create visualizations from the data.")
+st.markdown("Use the SDG Dashboard for exploratory data analysis of the United Nations Sustainable Development Goals Database. Explore the 17 sustainable development goals and their corresponding indicators, and select and download data by indicator, country, and time range. Use the AI chatbot to understand the dataset with natural language questions. Use the Mitosheet Spreadsheet as an embedded spreadsheet to manipulate data and create visualizations. Use the PyGWalker Data Visualization tool to create visualizations from the data.")
 st.page_link("sdg_dashboard.py", label="SDG Dashboard", icon=":material/show_chart:", use_container_width=True)
+
+st.markdown("#### ACLED Data Dashboard")
+st.markdown("Use the ACLED Data Dashboard for exploratory data analysis of the ACLED data. Create automatic interactive time series graphs on the selected data. Use the AI chatbot to understand the dataset with natural language questions. Use the Mitosheet Spreadsheet as an embedded spreadsheet to manipulate data and create visualizations. Use the PyGWalker Data Visualization tool to create visualizations from the data.")
+st.page_link("sdg_dashboard.py", label="ACLED Data Dashboard", icon=":material/newspaper:", use_container_width=True)
 
 st.markdown("#### OSAA General Chatbot")
 st.markdown("The OSAA General Chatbot is similar to ChatGPT, except it has context specific to OSAA. Use it for questions specific to OSAA work.")

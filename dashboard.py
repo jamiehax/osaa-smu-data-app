@@ -330,7 +330,7 @@ with st.container():
         messages_container.chat_message("user").markdown(prompt)
 
         if filtered_df is not None:
-            df_string = summarize_dataframe(filtered_df)
+            # df_string = summarize_dataframe(filtered_df)
             df_string = filtered_df.to_string()
         else:
             df_string = "There is no DataFrame available."

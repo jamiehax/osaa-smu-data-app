@@ -1,5 +1,4 @@
 import streamlit as st
-import wbgapi as wb
 import pandas as pd
 from ydata_profiling import ProfileReport
 from streamlit_pandas_profiling import st_profile_report
@@ -7,6 +6,7 @@ import pdfkit
 import os
 import tempfile
 import plotly.express as px
+import requests
 from mitosheet.streamlit.v1 import spreadsheet
 from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
 import streamlit.components.v1 as components
@@ -22,47 +22,18 @@ from langchain_core.messages import BaseMessage, ToolMessage
 from typing import List
 
 
-# cached functions for retreiving data
 @st.cache_data
-def get_databases():
+def get_data(url):
+    """
+    Function to get data from the passed URL through an HTTPS request and return it as a JSON object. Data is cached so that function does not rerun when URL doesn't change.
+    """
     try:
-        data = [(database["id"], database["name"]) for database in wb.source.list()]
+        data = requests.get(url).json()
     except Exception as e:
+        st.cache_data.clear()
         data = e
-    
+
     return data
-
-@st.cache_data
-def get_indicators():
-    try:
-        data = list(wb.series.list())
-    except Exception as e:
-        data = e
-    
-    return data
-
-@st.cache_data
-def get_query_result(search_query, db):
-    try:
-        data = list(wb.series.list(q=search_query, db=db))
-    except Exception as e:
-        data = e
-    
-    return data
-
-@st.cache_data
-def get_countries():
-    try:
-        data = list(wb.economy.list())
-    except Exception as e:
-        data = e
-    
-    return data
-    
-def get_countries_by_region(region):
-    return iso3_reference_df[iso3_reference_df['Region Name'] == region]['iso3'].tolist()
-
-
 
 # chatbot functions
 def get_session_history(session_id: str) -> BaseChatMessageHistory:
@@ -133,266 +104,119 @@ def summarize_dataframe(df, max_rows=5, max_categories=25):
 
     return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
 
+
+
+# read in iso3 code reference df
+iso3_reference_df = pd.read_csv('content/iso3_country_reference.csv')
+iso3_reference_df['m49'] = iso3_reference_df['m49'].astype(str)
+
+chat_session_id = 'acled-dashboard-chat-id'
+
 # create session states
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
-if 'wb_df' not in st.session_state:
-    st.session_state['wb_df'] = None
-if 'wb_df_melted' not in st.session_state:
-    st.session_state['wb_df_melted'] = None
-
-chat_session_id = 'wb-dashboard-chat-id'
+if 'acled_df' not in st.session_state:
+    st.session_state['acled_df'] = None
 
 # title and introduction
-st.title("OSAA SMU's World Bank Data Dashboard")
+st.title("OSAA SMU's ACLED Data Dashboard")
 
-st.markdown("The WorldBank Data Dashboard allows for exploratory data analysis of the World Bank's Data. First, select one of the WorldBank's databases to use. Then select the indicators, countries, and time range to get data for. Indicators can be filtered with keywords. For example, if you are using the *Doing Business* database and interested in indicators related to construction, enter *construction* into the search box to limit the indicators to only those that mention construction.")
+st.markdown("The ACLED Data Dashboard allows for exploratory data analysis of the ACLED Data.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-# read in iso3 code reference df
-iso3_reference_df = pd.read_csv('content/iso3_country_reference.csv')
+st.markdown("#### Select Countries")
 
-st.markdown("#### Select Database:")
-databases = get_databases()
-if isinstance(databases, Exception): 
-    st.write(f"error getting databases info: \n{databases}")
-else:
-    selected_db_name = st.selectbox("available databases:", [database[1] for database in databases], label_visibility="collapsed")
-    selected_db = next(database[0] for database in databases if database[1] == selected_db_name)
-    if selected_db: wb.db = selected_db
+# select by region
+region_mapping = {
+    "Western Africa": 1,
+    "Middle Africa": 2,
+    "Eastern Africa": 3,
+    "Southern Africa": 4,
+    "Northern Africa": 5,
+    "South Asia": 7,
+    "Southeast Asia": 9,
+    "Middle East": 11,
+    "Europe": 12,
+    "Caucasus and Central Asia": 13,
+    "Central America": 14,
+    "South America": 15,
+    "Caribbean": 16,
+    "East Asia": 17,
+    "North America": 18,
+    "Oceania": 19,
+    "Antarctica": 20
+}
+selected_regions = st.multiselect("select regions", region_mapping.keys(), None, placeholder="select by region", label_visibility="collapsed")
+selected_region_codes = [region_mapping.get(selected_region) for selected_region in selected_regions]
 
-st.markdown("#### Select Indicators:")
-st.write("NOTE: keyword queries ignore the parenthetical part of the indicator name. For example, 'GDP' will not match 'Gross domestic savings (% of GDP)'. To search the parenthetical part too, add an exclamation point like this: '!GDP'")
-search_query = st.text_input(
-        "enter keywords to filter indicators",
-        label_visibility='collapsed',
-        placeholder="enter keywords to filter indicators"
-    )
-query_result = get_query_result(search_query, selected_db)
-if isinstance(query_result, Exception): 
-    st.write(f"error getting query result info: \n{query_result}")
-else:
-    formatted_indicators = [f"{indicator['id']} - {indicator['value']}" for indicator in query_result]
-    selected_indicator_names = st.multiselect("available indicators:", formatted_indicators, label_visibility="collapsed", placeholder="select indicator(s)")
-    selected_indicators = [indicator.split(' - ')[0] for indicator in selected_indicator_names]
-
-
-st.markdown("#### Select Countries:")
-
-countries = get_countries()
-if isinstance(countries, Exception): 
-    st.write(f"error getting country info: \n{countries}")
-else:
-    regions = iso3_reference_df['Region Name'].dropna().unique()
-
-    selected_regions = st.multiselect(
-        "select regions:",
-        ['SELECT ALL'] + list(regions),
-        label_visibility="collapsed",
-        placeholder="select by region"
-    )
-
-    if 'SELECT ALL' in selected_regions:
-        selected_regions = [r for r in regions if r != 'SELECT ALL']
-    else:
-        selected_regions = [r for r in selected_regions if r != 'SELECT ALL']
-
-    selected_countries = []
-    for region in selected_regions:
-        selected_countries.extend(get_countries_by_region(region))
-
-    # remove duplicates
-    selected_countries = list(set(selected_countries))
-    selected_country_names = iso3_reference_df[iso3_reference_df['iso3'].isin(selected_countries)]['Country or Area'].tolist()
-    iso3_to_name = dict(zip(iso3_reference_df['iso3'], iso3_reference_df['Country or Area']))
-    selected_countries_formatted = [f"{country_code} - {iso3_to_name[country_code]}" for country_code in selected_countries]
-
-    available_countries = list(zip(iso3_reference_df['iso3'].tolist(), iso3_reference_df['Country or Area'].tolist()))
-    available_countries_formatted = [f"{country[0]} - {country[1]}" for country in available_countries]
-
-    selected_countries = st.multiselect(
-        "Available countries:",
-        available_countries_formatted,
-        default=selected_countries_formatted,
-        label_visibility="collapsed",
-        placeholder="select by country"
-    )
-    selected_iso3_codes = [entry.split(' - ')[0] for entry in selected_countries]
+# select by country
+country_to_iso_map = dict(zip(iso3_reference_df['Country or Area'], iso3_reference_df['m49']))
+selected_countries = st.multiselect("select countries", iso3_reference_df['Country or Area'], None, placeholder="select by country",label_visibility="collapsed")
+selected_country_codes = [country_to_iso_map.get(selected_country) for selected_country in selected_countries]
 
 st.markdown("#### Select Time Range")
 
+# select years
 selected_years = st.slider( "Select a range of years:", min_value=1960, max_value=2024, value=(1960, 2024), step=1, label_visibility="collapsed")
 
-# get world bank data
-try:
-    if st.button("get data", type='primary', use_container_width=True):
-        wb_df = wb.data.DataFrame(selected_indicators, selected_iso3_codes, list(range(selected_years[0], selected_years[1]))).reset_index()
+if st.button("Get Data", type="primary", use_container_width=True):
 
-        # deal with edge cases where there is no economy column
-        if 'economy' not in wb_df.columns:
-            wb_df['economy'] = selected_iso3_codes[0]
+    # construct API request URL
 
-        # deal with edge cases where there is no series column
-        if 'series' not in wb_df.columns:
-            wb_df['series'] = selected_indicators[0]
-    
-        # add country reference codes
-        wb_df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
+    api_key = st.secrets['acled_key']
+    email = "james.hackney@un.org"
+    # email = st.secrets['acled_email']
 
-        # rename and drop duplicate columns
-        wb_df.drop(columns=['iso3'], inplace=True)
-        wb_df = wb_df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
+    BASE_URL = f"https://api.acleddata.com/acled/read?key={api_key}&email={email}"
 
-        # add indicator description
-        indicator_code_description_map = {d['id']: d['value'] for d in query_result}
-        wb_df['Indicator Description'] = wb_df['Indicator'].map(indicator_code_description_map)
+    region_param = "&region=" + ":OR:region=".join([str(code) for code in selected_region_codes])
+    country_param = "&iso=" + ":OR:iso=".join(selected_country_codes)
+    year_param = f"&year={selected_years[0]}|{selected_years[1]}&year_where=BETWEEN"
 
-        # reorder columns
-        column_order = ['Indicator', 'Indicator Description', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in wb_df.columns if col.startswith('YR')]
-        df = wb_df[column_order]
+    data_url = f"{BASE_URL}{country_param}{year_param}{region_param}"
 
-        # create melted df
-        df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
-        df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
-        st.session_state.wb_df_melted = df_melted
+    # API query parameters
+    data = get_data(data_url)
 
-        st.dataframe(df)
-        st.session_state.wb_df = df
-
+    st.markdown("#### Dataset")
+    if isinstance(data, Exception):
+        st.error(data)
     else:
-        df = None
-        df_melted = None
-        st.session_state.wb_df = df
-        st.session_state.wb_df_melted = df_melted
-
-except Exception as e:
-    st.error(f"no data retrieved. this is most likely due to blank indicator, country, or time values. please ensure there are values for the indicator, country, and time range. \n\n Error: {e}")
-    df = None
-    df_melted = None
-    st.session_state.wb_df = df
-    st.session_state.wb_df_melted = df_melted
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
-
-
-@st.fragment
-def show_plots():
-    st.subheader("Explore Data")
-    if st.session_state.wb_df_melted is not None:
+        try:
+            df = pd.DataFrame(data['data'])
+            if df.empty:
+                st.session_state.acled_df = None
+                st.markdown("**No data available for the selected countries, regions, and years.**")
+            else:
+                st.session_state.acled_df = df
+                st.write(df)
+        except Exception as e:
+            st.error(e)
+            st.session_state.acled_df = None
         
-        # plot country indicators
-        try:
-            fig = px.line(
-                st.session_state.wb_df_melted, 
-                x='Year', 
-                y='Value', 
-                color='Country or Area', 
-                symbol='Indicator',
-                markers=True,
-                labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
-                title="Time Series of Indicators by Country and Indicator"
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-        except Exception as e:
-            st.error(f"Error generating Time Series Graph:\n\n{e}")
-
-        # region line chart
-        with st.spinner("getting region data"):
-            region_df = wb.data.DataFrame(selected_indicators, time=list(range(selected_years[0], selected_years[1]))).reset_index()
-
-            if 'series' not in region_df.columns:
-                region_df['series'] = selected_indicators[0]
-
-            # add country reference codes
-            region_df = region_df.merge(iso3_reference_df[['Region Name', 'Sub-region Name', 'iso3']], left_on='economy', right_on='iso3', how='left')
-
-            # rename and drop duplicate columns
-            region_df.drop(columns=['iso3'], inplace=True)
-            region_df = region_df.rename(columns={'series': 'Indicator', 'economy': 'iso3'})
-            
-            region_df_melted = region_df.melt(id_vars=['Indicator', 'Region Name', 'Sub-region Name', 'iso3'], var_name='Year', value_name='Value')
-            region_df_melted['Year'] = region_df_melted['Year'].str.extract('(\d{4})').astype(int)
-            
-            region_avg_df = region_df_melted.groupby(['Indicator', 'Region Name', 'Year'])['Value'].mean().reset_index()
-            world_avg_df = region_avg_df.groupby(['Indicator', 'Year'])['Value'].mean().reset_index()
-
-            world_avg_df['Region Name'] = 'World'
-            world_avg_df.rename(columns={'Value': 'Value'}, inplace=True)
-            region_avg_df = pd.concat([region_avg_df, world_avg_df], ignore_index=True)
-
-        try:
-            fig = px.line(
-                region_avg_df, 
-                x='Year', 
-                y='Value', 
-                color='Region Name', 
-                symbol='Indicator',
-                markers=True,
-                labels={'Country or Area': 'Country', 'Indicator': 'Indicator', 'Indicator Description': 'Indicator Description', 'Value': 'Value', 'Year': 'Year'},
-                title="Time Series of Indicators by Region and Indicator"
-            )
-
-            st.plotly_chart(fig, use_container_width=True)
-
-        except Exception as e:
-            st.error(f"Error generating Time Series Graph:\n\n{e}")
-
-
-        # map graph
-        st.markdown("###### Choose an Indicator to show on the map")
-        indicator_descriptions = df_melted['Indicator Description'].unique()
-        selected_indicator = st.selectbox("select indicator to show on map:", indicator_descriptions, label_visibility="collapsed")
-        indicator_description_code_map = {d['value']: d['id'] for d in query_result}
-        selected_code = indicator_description_code_map[selected_indicator]
-        indicator_df = df_melted[(df_melted['Indicator'] == selected_code)]
-
-        most_recent_year_with_value = indicator_df.dropna(subset=['Value'])
-        most_recent_year = most_recent_year_with_value['Year'].max()
-        map_df = most_recent_year_with_value[most_recent_year_with_value['Year'] == most_recent_year]
-
-        try:
-            fig = px.choropleth(
-                map_df,
-                locations='iso3',
-                color='Value',
-                hover_name='Country or Area',
-                color_continuous_scale='Viridis',
-                projection='natural earth',
-                title="Map of Indicator Value"
-            )
-
-            st.plotly_chart(fig)
-
-        except Exception as e:
-            st.error(f"Error generating Map Graph:\n\n{e}")
-
-
-    else:
-        st.write("data not available for the selected indicator(s), countries, and year(s).")
-show_plots()
+else:
+    df = None
+    st.session_state.acled_df = df
 
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-
+st.markdown("### Variable Summary")
 @st.fragment
 def show_summary():
     """
     Show Summary statistics on variables.
     """
 
-    st.markdown("### Variable Summary")
-    if st.session_state.wb_df is not None and not st.session_state.wb_df.empty:
-        if not st.session_state.wb_df.empty:
-            summary = st.session_state.wb_df.describe()
+    if st.session_state.acled_df is not None:
+        if not st.session_state.acled_df.empty:
+
+            summary = st.session_state.acled_df.describe()
 
             columns = summary.columns
             tabs = st.tabs(columns.to_list())
@@ -421,10 +245,9 @@ show_summary()
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-
+# st.markdown("### Natural Language Analysis")
 @st.fragment
 def show_chatbot():
-    st.subheader("Natural Language Analysis")
     st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
 
     model = AzureChatOpenAI(
@@ -482,9 +305,9 @@ def show_chatbot():
 
             messages_container.chat_message("user").markdown(prompt)
 
-            if st.session_state.wb_df is not None:
-                # df_string = summarize_dataframe(st.session_state.wb_df)
-                df_string = st.session_state.wb_df.to_string()
+            if st.session_state.acled_df is not None:
+                df_string = summarize_dataframe(st.session_state.acled_df)
+                df_string = st.session_state.acled_df.to_string()
             else:
                 df_string = "There is no DataFrame available."
 
@@ -520,17 +343,15 @@ def show_chatbot():
 
         if st.button("clear chat history", type="primary", use_container_width=True):
             clear_chat_history(chat_session_id)
-show_chatbot()
+# show_chatbot()
 
 
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
+# st.markdown("<hr>", unsafe_allow_html=True)
+# st.write("")
 
-
-# create the dataframe profile and display it
+st.markdown("### Dataset Profile Report")
 @st.fragment
 def show_report():
-    st.subheader("Dataset Profile Report")
     st.write("Click the button below to generate a more detailed report of the filtered dataset. If there is no dataset selcted or the filters have resulted in an empty dataset, the button will be disabled. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF.")
 
     button_container = st.container()
@@ -541,10 +362,10 @@ def show_report():
         with button_container:
             col1, col2 = st.columns(2)
             with col1:
-                if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (st.session_state.wb_df is not None and not st.session_state.wb_df.empty)):
+                if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (st.session_state.acled_df is not None and not st.session_state.acled_df.empty)):
                     
                     # make profile report
-                    profile = ProfileReport(st.session_state.wb_df, title="Profile Report for WorldBank Data", explorative=True)
+                    profile = ProfileReport(st.session_state.acled_df, title="Profile Report for UNSDG Data", explorative=True)
 
                     # display profile report
                     with report_container:
@@ -580,35 +401,32 @@ show_report()
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-
+st.markdown("### Mitsheet Spreadsheet")
 @st.fragment
 def show_mitosheet():
-    st.subheader("Mitosheet Spreadsheet")
-    if st.session_state.wb_df_melted is not None and not st.session_state.wb_df_melted.empty:
-        new_dfs, code = spreadsheet(st.session_state.wb_df_melted)
+    if st.session_state.acled_df is not None and not st.session_state.acled_df.empty:
+        new_dfs, code = spreadsheet(st.session_state.acled_df)
         if code:
             st.markdown("##### Generated Code:")
-            st.code(code)
+            st.code(code, language='python')
     else:
         st.write("data not available for the selected indicator(s), countries, and year(s).")
 show_mitosheet()
 
-
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
-
+st.markdown("### PyGWalker Data Visualization Tool")
 @st.fragment
 def show_pygwalker():
-    st.subheader("PyGWalker Data Visualization Tool")
-    if st.session_state.wb_df_melted is not None and not st.session_state.wb_df_melted.empty:
+    if st.session_state.acled_df is not None and not st.session_state.acled_df.empty:
         init_streamlit_comm()
         @st.cache_resource
         def get_pyg_html(df: pd.DataFrame) -> str:
-            html = get_streamlit_html(st.session_state.wb_df_melted, spec="./gw0.json", use_kernel_calc=True, debug=False)
+            html = get_streamlit_html(st.session_state.acled_df, spec="./gw0.json", use_kernel_calc=True, debug=False)
             return html
 
-        components.html(get_pyg_html(st.session_state.wb_df_melted), width=1300, height=1000, scrolling=True)
+        components.html(get_pyg_html(st.session_state.acled_df), width=1300, height=1000, scrolling=True)
     else:
         st.write("data not available for the selected indicator(s), countries, and year(s).")
 show_pygwalker()
