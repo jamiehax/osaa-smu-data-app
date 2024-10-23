@@ -27,8 +27,8 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
 if 'formatted_chat_history' not in st.session_state:
     st.session_state.formatted_chat_history = {}
-if 'df' not in st.session_state:
-    st.session_state.df = None
+if 'data_df' not in st.session_state:
+    st.session_state.data_df = None
 
 # page chat id
 chat_session_id = 'data-dashboard-chat-id'
@@ -148,9 +148,9 @@ st.write("Either search through existing datasets or upload your own dataset as 
 # df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
 
 # if df_name is not None:
-#     st.session_state.df = get_df(st.session_state.db_path, df_name)
+#     st.session_state.data_df = get_df(st.session_state.db_path, df_name)
 # else:
-#     st.session_state.df = None
+#     st.session_state.data_df = None
 
 
 # select a a dataset by uploading it
@@ -160,21 +160,20 @@ uploaded_df = st.file_uploader("Choose a file", type=["csv", "xlsx"], label_visi
 if uploaded_df is not None:
     df_name = uploaded_df.name
     if uploaded_df.name.endswith('.csv'):
-        st.session_state.df = pd.read_csv(uploaded_df)
+        st.session_state.data_df = pd.read_csv(uploaded_df)
     elif uploaded_df.name.endswith('.xlsx'):
-        st.session_state.df = pd.read_excel(uploaded_df)
-
-
-df = st.session_state.df
+        st.session_state.data_df = pd.read_excel(uploaded_df)
+else:
+    st.session_state.data_df = None
 
 # filter the dataset
-if df is not None:
+if st.session_state.data_df is not None:
     with st.container(height=500):
         st.markdown("##### Column Filters")
         
-        selected_columns = st.multiselect('select columns to filter:', df.columns.tolist(), df.columns.tolist())
+        selected_columns = st.multiselect('select columns to filter:', st.session_state.data_df.columns.tolist(), st.session_state.data_df.columns.tolist())
         
-        filtered_df = df.copy()
+        filtered_df = st.session_state.data_df.copy()
         
         # iterate over columns and display filters for each
         for col in selected_columns:
@@ -182,43 +181,47 @@ if df is not None:
             st.markdown(f"##### Filter by {col}")
 
             # numeric columns
-            if pd.api.types.is_numeric_dtype(df[col]):
-                if df[col].isna().all() or df[col].min() == df[col].max():
-                    st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
+            if pd.api.types.is_numeric_dtype(st.session_state.data_df[col]):
+                if st.session_state.data_df[col].isna().all() or st.session_state.data_df[col].min() == st.session_state.data_df[col].max():
+                    st.markdown(f"Cannot filter *{col}* because it has invalid or constant values.")
                 else:
-                    if pd.api.types.is_integer_dtype(df[col]):
-                        min_val, max_val = int(df[col].min()), int(df[col].max())
+                    # Determine column type and set slider
+                    if pd.api.types.is_integer_dtype(st.session_state.data_df[col]):
+                        min_val, max_val = int(st.session_state.data_df[col].min()), int(st.session_state.data_df[col].max())
                         selected_range = st.slider(f"Select range for {col} (int):", min_val, max_val, (min_val, max_val), step=1)
-                    elif pd.api.types.is_float_dtype(df[col]):
-                        min_val, max_val = float(df[col].min()), float(df[col].max())
+                    elif pd.api.types.is_float_dtype(st.session_state.data_df[col]):
+                        min_val, max_val = float(st.session_state.data_df[col].min()), float(st.session_state.data_df[col].max())
                         selected_range = st.slider(f"Select range for {col} (float):", min_val, max_val, (min_val, max_val))
-            
-                    filtered_df = filtered_df[(filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1])]
+
+                    # Apply filter while retaining NaN values (if needed)
+                    filtered_df = filtered_df[
+                        (filtered_df[col].isna()) |  # Keep rows with NaN
+                        ((filtered_df[col] >= selected_range[0]) & (filtered_df[col] <= selected_range[1]))
+                    ]
             
             # categorical columns
-            elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
-                if df[col].isna().all() or df[col].nunique() == 1:
+            elif pd.api.types.is_categorical_dtype(st.session_state.data_df[col]) or pd.api.types.is_object_dtype(st.session_state.data_df[col]):
+                if st.session_state.data_df[col].isna().all() or st.session_state.data_df[col].nunique() == 1:
                      st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
                 else:
-                    unique_vals = df[col].dropna().unique().tolist()
+                    unique_vals = st.session_state.data_df[col].dropna().unique().tolist()
                     selected_vals = st.multiselect(f"Select values for {col}:", unique_vals, unique_vals)
                     filtered_df = filtered_df[filtered_df[col].isin(selected_vals)]
             
             # datetime columns
-            elif pd.api.types.is_datetime64_any_dtype(df[col]):
-                if df[col].isna().all() or df[col].min() == df[col].max():
+            elif pd.api.types.is_datetime64_any_dtype(st.session_state.data_df[col]):
+                if st.session_state.data_df[col].isna().all() or st.session_state.data_df[col].min() == st.session_state.data_df[col].max():
                      st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
                 else:
-                    min_date, max_date = df[col].min(), df[col].max()
+                    min_date, max_date = st.session_state.data_df[col].min(), st.session_state.data_df[col].max()
                     selected_dates = st.date_input(f"Select date range for {col}:", [min_date, max_date])
-                    filtered_df = filtered_df[(df[col] >= pd.to_datetime(selected_dates[0])) & (df[col] <= pd.to_datetime(selected_dates[1]))]
+                    filtered_df = filtered_df[(st.session_state.data_df[col] >= pd.to_datetime(selected_dates[0])) & (st.session_state.data_df[col] <= pd.to_datetime(selected_dates[1]))]
             
+                
             else:
-                st.write(f"Unsupported column type for filtering: {df[col].dtype}")
+                st.write(f"Unsupported column type for filtering: {st.session_state.data_df[col].dtype}")
     
-
         filtered_df = filtered_df[selected_columns]
-
 else:
     filtered_df = None
 
@@ -444,6 +447,6 @@ if filtered_df is not None and not filtered_df.empty:
         html = get_streamlit_html(df, spec="./gw0.json", use_kernel_calc=True, debug=False)
         return html
 
-    components.html(get_pyg_html(df), width=1300, height=1000, scrolling=True)
+    components.html(get_pyg_html(filtered_df), width=1300, height=1000, scrolling=True)
 else:
     st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
