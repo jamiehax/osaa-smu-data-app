@@ -2,9 +2,6 @@ streamlit
 duckdb
 mitosheet
 PyGWalker
-pdfkit
-ydata-profiling
-streamlit-pandas-profiling
 wbgapi
 plotly
 langchain-core
