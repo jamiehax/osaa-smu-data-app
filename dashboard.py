@@ -1,10 +1,4 @@
 import streamlit as st
-from helper_functions import get_dataset_names, get_df
-from ydata_profiling import ProfileReport
-from streamlit_pandas_profiling import st_profile_report
-import pdfkit
-import os
-import tempfile
 import pandas as pd
 from mitosheet.streamlit.v1 import spreadsheet
 from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
@@ -370,56 +364,6 @@ with st.container():
     if st.button("clear chat history", type="primary", use_container_width=True):
         clear_chat_history(chat_session_id)
         st.rerun()
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
-
-
-# create the dataframe profile and display it
-st.subheader("Dataset Profile Report")
-st.write("Click the button below to generate a more detailed report of the filtered dataset. If there is no dataset selcted or the filters have resulted in an empty dataset, the button will be disabled. Depending on the size of the selected dataset, this could take some time. Once a report has been generated, it can be downloaded as a PDF.")
-
-button_container = st.container()
-report_container = st.container()
-download_container = st.container()
-
-try:
-    with button_container:
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button('Generate Dataset Profile Report', use_container_width=True, type="primary", disabled=not (filtered_df is not None and not filtered_df.empty)):
-                
-                # make profile report
-                profile = ProfileReport(filtered_df, title=f"Profile Report for {df_name}", explorative=True)
-
-                # display profile report
-                with report_container:
-                    with st.expander("show report"):
-                        st_profile_report(profile)
-
-                # download the file
-                with download_container:
-                    with tempfile.NamedTemporaryFile(suffix='.html', delete=False) as tmp_html:
-                        profile_file_path = tmp_html.name
-                        profile.to_file(profile_file_path)
-                    
-                    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:
-                        pdf_file_path = tmp_pdf.name
-                    
-                    pdfkit.from_file(profile_file_path, pdf_file_path)
-
-                    with open(pdf_file_path, 'rb') as f:
-                        st.download_button('Download PDF', f, file_name='dataset profile report.pdf', mime='application/pdf', use_container_width=True, type="primary")
-
-                    # clean up temporary files
-                    os.remove(profile_file_path)
-                    os.remove(pdf_file_path)
-
-        with col2:
-            with st.popover("What are YData Profile Reports?", use_container_width=True):
-                st.write("YData Profiling is a Python package that offers a range of features to help with exploratory data analysis. It generates a detailed report that includes descriptive statistics for each variable, such as mean, median, and standard deviation for numerical data, and frequency distribution for categorical data. It will also highlights missing values, detects duplicate rows, and identifies potential outliers. Additionally, it provides correlation matrices to explore relationships between variables, interaction plots to visualize dependencies, and alerts to flag data quality issues like high cardinality or skewness. It also includes visualizations like scatter plots, histograms, and heatmaps, making it easier to spot trends and or anomalies in your dataset.")
-except Exception as e:
-        st.error(f"Error generating report:\n\n{e}")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
