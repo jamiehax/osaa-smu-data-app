@@ -236,7 +236,7 @@ try:
             wb_df['series'] = selected_indicators[0]
     
         # add country reference codes
-        wb_df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
+        wb_df = wb_df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'Intermediate Region Name', 'iso2', 'iso3', 'm49']], left_on='economy', right_on='iso3', how='left')
 
         # rename and drop duplicate columns
         wb_df.drop(columns=['iso3'], inplace=True)
@@ -247,11 +247,11 @@ try:
         wb_df['Indicator Description'] = wb_df['Indicator'].map(indicator_code_description_map)
 
         # reorder columns
-        column_order = ['Indicator', 'Indicator Description', 'Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'] + [col for col in wb_df.columns if col.startswith('YR')]
+        column_order = ['Indicator', 'Indicator Description', 'Country or Area', 'Region Name', 'Sub-region Name', 'Intermediate Region Name', 'iso2', 'iso3', 'm49'] + [col for col in wb_df.columns if col.startswith('YR')]
         df = wb_df[column_order]
 
         # create melted df
-        df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
+        df_melted = wb_df.melt(id_vars=['Country or Area', 'Indicator', 'Indicator Description', 'Region Name', 'Sub-region Name', 'Intermediate Region Name', 'iso2', 'iso3', 'm49'], var_name='Year', value_name='Value')
         df_melted['Year'] = df_melted['Year'].str.extract('(\d{4})').astype(int)
         st.session_state.wb_df_melted = df_melted
 
