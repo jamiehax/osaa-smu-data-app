@@ -1,5 +1,4 @@
 import streamlit as st
-from helper_functions import setup_db
 import hmac
 
 # check password
@@ -44,13 +43,7 @@ def check_password():
 if not check_password():
     st.stop()
 
-
-# create test database
-db_path = setup_db()
-
 # create session states
-if 'db_path' not in st.session_state:
-    st.session_state.db_path = db_path
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = {}
 if 'formatted_chat_history' not in st.session_state:
