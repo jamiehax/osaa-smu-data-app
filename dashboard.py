@@ -1,173 +1,39 @@
 import streamlit as st
 import pandas as pd
-from mitosheet.streamlit.v1 import spreadsheet
-from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
-import streamlit.components.v1 as components
-from langchain_openai import AzureChatOpenAI
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim_messages
-from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from operator import itemgetter
-from langchain_core.runnables import RunnablePassthrough
-import tiktoken
-from langchain_core.messages import BaseMessage, ToolMessage
-from typing import List
+from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker
 
-
-
-# create session states
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = {}
-if 'formatted_chat_history' not in st.session_state:
-    st.session_state.formatted_chat_history = {}
-if 'data_df' not in st.session_state:
-    st.session_state.data_df = None
 
 # page chat id
 chat_session_id = 'data-dashboard-chat-id'
 
-
-# functions for chat bot tool
-def get_session_history(session_id: str) -> BaseChatMessageHistory:
-    """
-    Return the chat history for the passed session id.
-    """
-
-    if session_id not in st.session_state.chat_history:
-        st.session_state.chat_history[session_id] = InMemoryChatMessageHistory()
-    return st.session_state.chat_history[session_id]
-
-def clear_chat_history(session_id: str) -> None:
-    """
-    Clear the chat history for the passed session id.
-    """
-    
-    if session_id in st.session_state.chat_history:
-        st.session_state.chat_history[session_id].clear()
-    st.session_state.formatted_chat_history = {}
-
-def display_chat_history(session_id: str) -> None:
-    """
-    Display the chat history in a formatted way.
-    """
-    
-    messages = st.session_state.formatted_chat_history.get(session_id, None)
-    if messages is None:
-        st.session_state.formatted_chat_history[session_id] = []
-        intro_message = "Hi! I am a chatbot assistant trained to help you understand your data. Ask me questions about your currently selected dataset in natural language and I will answer them!"
-        st.chat_message("assistant").markdown(intro_message)
-        st.session_state.formatted_chat_history[session_id].append({"role": "assistant", "content": intro_message})
-    else:   
-        for message in messages:
-            st.chat_message(message["role"]).markdown(message["content"])
-
-def str_token_counter(text: str) -> int:
-    """
-    Return the number of tokens to encode the passed text.
-    """
-    
-    enc = tiktoken.get_encoding("o200k_base")
-    return len(enc.encode(text))
-
-def tiktoken_counter(messages: List[BaseMessage]) -> int:
-    """
-    Return the number of tokens for the message history using the tiktoken counter.
-    """
-    
-    num_tokens = 3 
-    tokens_per_message = 3
-    tokens_per_name = 1
-    for msg in messages:
-        if isinstance(msg, HumanMessage):
-            role = "user"
-        elif isinstance(msg, AIMessage):
-            role = "assistant"
-        elif isinstance(msg, ToolMessage):
-            role = "tool"
-        elif isinstance(msg, SystemMessage):
-            role = "system"
-        else:
-            raise ValueError(f"Unsupported messages type {msg.__class__}")
-        num_tokens += (
-            tokens_per_message
-            + str_token_counter(role)
-            + str_token_counter(msg.content)
-        )
-        if msg.name:
-            num_tokens += tokens_per_name + str_token_counter(msg.name)
-    return num_tokens
-
-def summarize_dataframe(df: pd.DataFrame, max_rows=5, max_categories=25) -> str:
-    """
-    Return a string combining a summary and preview of the dataframe. 
-    """
-    
-    summary = df.describe().to_string()
-    preview = df.head(max_rows).to_string()
-
-    categorical_counts = []
-    non_numeric_columns = df.select_dtypes(exclude='number').columns
-    for col in non_numeric_columns:
-        counts = df[col].value_counts().nlargest(max_categories).to_string()
-        categorical_counts.append(f"Column '{col}' top {max_categories} categories: {counts}")
-
-    categorical_unique = []
-    non_numeric_columns = df.select_dtypes(exclude='number').columns
-    for col in non_numeric_columns:
-        num_unique = df[col].nunique()
-        num_missing = df[col].isna().sum()
-        categorical_unique.append(f"Column '{col}': {num_unique} unique values and {num_missing} missing values")
-
-    return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
-
-
-
 # title and introduction
 st.title("OSAA SMU's Data Dashboard")
 st.markdown("The Data Dashboard allows for exploratory data analysis on a dataset through quick access to summary statistics and natural language conversations with an AI chatbot that has the ability to understand the dataset. First select a dataset to view by searching the available datasets by name or uploading your own. Once you have selected a dataset, you can filter and subset the dataset to only focus on the area(s) of interest. Once you have selected and filtered a dataset, you can view the summary statistics on that data. To generate and download a more detailed summary, go to the *Dataset Profile Report* section once you have selected and filtered the dataset. Use the *Natural Language Queries* section to understand the data by asking natural language questions to a chatbot that understands the data.")
-
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 
 # find and choose a dataset
-st.subheader("Select and Filter a Dataset")
-st.write("Either search through existing datasets or upload your own dataset as a CSV or Excel file.")
-
-
-# # select a dataset from the database
-# st.markdown("##### Search Datasets")
-# dataset_names = get_dataset_names(st.session_state.db_path)
-# df_name = st.selectbox("find a dataset", dataset_names, index=None, placeholder="search datasets...", label_visibility="collapsed")
-
-# if df_name is not None:
-#     st.session_state.data_df = get_df(st.session_state.db_path, df_name)
-# else:
-#     st.session_state.data_df = None
-
-
-# select a a dataset by uploading it
-st.markdown("##### Upload a Dataset (CSV or excel)")
+st.subheader("Upload and Filter a Dataset")
 uploaded_df = st.file_uploader("Choose a file", type=["csv", "xlsx"], label_visibility="collapsed")
 
 if uploaded_df is not None:
     df_name = uploaded_df.name
     if uploaded_df.name.endswith('.csv'):
-        st.session_state.data_df = pd.read_csv(uploaded_df)
+        df = pd.read_csv(uploaded_df)
     elif uploaded_df.name.endswith('.xlsx'):
-        st.session_state.data_df = pd.read_excel(uploaded_df)
+        df = pd.read_csv(uploaded_df)
 else:
-    st.session_state.data_df = None
+    df = None
 
 # filter the dataset
-if st.session_state.data_df is not None:
+if df is not None:
     with st.container(height=500):
         st.markdown("##### Column Filters")
         
-        selected_columns = st.multiselect('select columns to filter:', st.session_state.data_df.columns.tolist(), st.session_state.data_df.columns.tolist())
+        selected_columns = st.multiselect('select columns to filter:', df.columns.tolist(), df.columns.tolist())
         
-        filtered_df = st.session_state.data_df.copy()
+        filtered_df = df.copy()
         
         # iterate over columns and display filters for each
         for col in selected_columns:
@@ -175,16 +41,16 @@ if st.session_state.data_df is not None:
             st.markdown(f"##### Filter by {col}")
 
             # numeric columns
-            if pd.api.types.is_numeric_dtype(st.session_state.data_df[col]):
-                if st.session_state.data_df[col].isna().all() or st.session_state.data_df[col].min() == st.session_state.data_df[col].max():
+            if pd.api.types.is_numeric_dtype(df[col]):
+                if df[col].isna().all() or df[col].min() == df[col].max():
                     st.markdown(f"Cannot filter *{col}* because it has invalid or constant values.")
                 else:
                     # Determine column type and set slider
-                    if pd.api.types.is_integer_dtype(st.session_state.data_df[col]):
-                        min_val, max_val = int(st.session_state.data_df[col].min()), int(st.session_state.data_df[col].max())
+                    if pd.api.types.is_integer_dtype(df[col]):
+                        min_val, max_val = int(df[col].min()), int(df[col].max())
                         selected_range = st.slider(f"Select range for {col} (int):", min_val, max_val, (min_val, max_val), step=1)
-                    elif pd.api.types.is_float_dtype(st.session_state.data_df[col]):
-                        min_val, max_val = float(st.session_state.data_df[col].min()), float(st.session_state.data_df[col].max())
+                    elif pd.api.types.is_float_dtype(df[col]):
+                        min_val, max_val = float(df[col].min()), float(df[col].max())
                         selected_range = st.slider(f"Select range for {col} (float):", min_val, max_val, (min_val, max_val))
 
                     # Apply filter while retaining NaN values (if needed)
@@ -194,203 +60,70 @@ if st.session_state.data_df is not None:
                     ]
             
             # categorical columns
-            elif pd.api.types.is_categorical_dtype(st.session_state.data_df[col]) or pd.api.types.is_object_dtype(st.session_state.data_df[col]):
-                if st.session_state.data_df[col].isna().all() or st.session_state.data_df[col].nunique() == 1:
+            elif pd.api.types.is_categorical_dtype(df[col]) or pd.api.types.is_object_dtype(df[col]):
+                if df[col].isna().all() or df[col].nunique() == 1:
                      st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
                 else:
-                    unique_vals = st.session_state.data_df[col].dropna().unique().tolist()
+                    unique_vals = df[col].dropna().unique().tolist()
                     selected_vals = st.multiselect(f"Select values for {col}:", unique_vals, unique_vals)
                     filtered_df = filtered_df[filtered_df[col].isin(selected_vals)]
             
             # datetime columns
-            elif pd.api.types.is_datetime64_any_dtype(st.session_state.data_df[col]):
-                if st.session_state.data_df[col].isna().all() or st.session_state.data_df[col].min() == st.session_state.data_df[col].max():
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                if df[col].isna().all() or df[col].min() == df[col].max():
                      st.markdown(f"cannot filter *{col}* because it has invalid or constant values.")
                 else:
-                    min_date, max_date = st.session_state.data_df[col].min(), st.session_state.data_df[col].max()
+                    min_date, max_date = df[col].min(), df[col].max()
                     selected_dates = st.date_input(f"Select date range for {col}:", [min_date, max_date])
-                    filtered_df = filtered_df[(st.session_state.data_df[col] >= pd.to_datetime(selected_dates[0])) & (st.session_state.data_df[col] <= pd.to_datetime(selected_dates[1]))]
+                    filtered_df = filtered_df[(df[col] >= pd.to_datetime(selected_dates[0])) & (df[col] <= pd.to_datetime(selected_dates[1]))]
             
                 
             else:
-                st.write(f"Unsupported column type for filtering: {st.session_state.data_df[col].dtype}")
+                st.write(f"Unsupported column type for filtering: {df[col].dtype}")
     
         filtered_df = filtered_df[selected_columns]
 else:
     filtered_df = None
 
 
-# display the dataset
-st.markdown("### Dataset")
-if filtered_df is not None and not filtered_df.empty:
-    st.write(filtered_df)
-else:
-    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
-
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
    
-# show summary statistics
-st.markdown("### Variable Summary")
+# if there is a dataset selected, show the dataset and data tools
 if filtered_df is not None and not filtered_df.empty:
-    if not filtered_df.empty:
-        summary = filtered_df.describe()
 
-        columns = summary.columns
-        tabs = st.tabs(columns.to_list())
+    # display the dataset
+    st.markdown("### Dataset")
+    st.write(filtered_df)
 
-        # return summary statistic if present
-        def get_stat(stat):
-            return summary.loc[stat, column] if stat in summary.index else "N/A"
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.write("")
 
-        for i, column in enumerate(columns):
-            with tabs[i]:
-                st.markdown(f"**Count**: {get_stat('count')}")
-                st.markdown(f"**Mean**: {get_stat('mean')}")
-                st.markdown(f"**Standard Deviation**: {get_stat('std')}")
-                st.markdown(f"**Min**: {get_stat('min')}")
-                st.markdown(f"**25th Percentile**: {get_stat('25%')}")
-                st.markdown(f"**50th Percentile (Median)**: {get_stat('50%')}")
-                st.markdown(f"**75th Percentile**: {get_stat('75%')}")
-                st.markdown(f"**Max**: {get_stat('max')}")
-    else:
-        st.write("no data to present summary statistics on.")
-else:
-    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+    # show summary statistics
+    st.markdown("### Variable Summary")
+    df_summary(filtered_df)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.write("") 
 
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("") 
+    # natural language dataset exploration
+    st.subheader("Natural Language Analysis")
+    st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, R, etc.).")
+    llm_data_analysis(filtered_df, chat_session_id)
 
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.write("") 
 
-# natural language dataset exploration
-st.subheader("Natural Language Analysis")
-st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, SQL, etc.).")
+    # Mitosheet
+    st.subheader("Mitosheet Spreadsheet")
+    show_mitosheet(filtered_df)
 
-model = AzureChatOpenAI(
-    azure_deployment="osaagpt32k",
-    api_key=st.secrets['azure'],
-    azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-    openai_api_version="2024-05-01-preview"
-)
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.write("") 
 
-trimmer = trim_messages(
-    max_tokens=1000,
-    strategy="last",
-    token_counter=tiktoken_counter,
-    include_system=True,
-    allow_partial=False,
-    start_on="human",
-)
-
-prompt = ChatPromptTemplate.from_messages(
-    [
-        # (
-        #     "system",
-        #     "You are a helpful data analyst assistant. Answer the user's question about their data. You will not have access to the entire dataset, instead you will get the first 5 rows of the data, as well as summaries of the columns. Use this to infer the answers to the users questions.",
-        # ),
-        (
-            "system",
-            "You are a helpful data analyst assistant. Answer the user's question about their data.",
-        ),
-        MessagesPlaceholder(variable_name="messages"),
-        (
-            "human",
-            "Here is the Pandas DataFrame: {dataframe}."
-        ),
-        (
-            "human",
-            "My question is: {prompt}."
-        )
-    ]
-)
-
-# first trim the message history, then format with the prompt, then send to the model
-chain = (
-    RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) 
-    | prompt 
-    | model
-)
-config = {"configurable": {"session_id": chat_session_id}}
-
-# display the formatted message history
-messages_container = st.container(height=500)
-with messages_container:
-    display_chat_history(chat_session_id)
-
-
-with st.container():
-    if prompt := st.chat_input("ask about the data..."):
-
-        st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": prompt})
-
-        messages_container.chat_message("user").markdown(prompt)
-
-        if filtered_df is not None:
-            # df_string = summarize_dataframe(filtered_df)
-            df_string = filtered_df.to_string()
-        else:
-            df_string = "There is no DataFrame available."
-
-        # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
-        # st.write(f"number tokens for used for dataset: {num_tokens}")
-
-        # get reponse
-        with_message_history = RunnableWithMessageHistory(
-            chain,
-            get_session_history,
-            input_messages_key="messages",
-        )
-        response_generator = with_message_history.stream(
-            {
-                "messages": [HumanMessage(content=prompt)],
-                "dataframe": df_string,
-                "prompt": prompt
-            },
-            config=config
-        )
-        
-        with messages_container:
-            with st.chat_message("assistant"):
-                try:
-                    response = st.write_stream(response_generator)
-                except Exception as e:
-                    response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
-                    st.write(response)
-
-        st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
-
-
-    if st.button("clear chat history", type="primary", use_container_width=True):
-        clear_chat_history(chat_session_id)
-        st.rerun()
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
-
-# display the mitosheet
-st.subheader("Mitosheet Spreadsheet")
-if filtered_df is not None and not filtered_df.empty:
-    new_dfs, code = spreadsheet(filtered_df)
-    if code:
-        st.markdown("##### Generated Code:")
-        st.code(code)
-else:
-    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
-
-
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
-
-# display the PyGWalker data viz tool
-st.subheader("PyGWalker Data Visualization Tool")
-if filtered_df is not None and not filtered_df.empty:
-    init_streamlit_comm()
-    @st.cache_resource
-    def get_pyg_html(df: pd.DataFrame) -> str:
-        html = get_streamlit_html(df, spec="./gw0.json", use_kernel_calc=True, debug=False)
-        return html
-
-    components.html(get_pyg_html(filtered_df), width=1300, height=1000, scrolling=True)
-else:
-    st.write("no dataset selected or the selected filters have resulted in an empty dataset.")
+    # PyGWalker
+    st.subheader("PyGWalker Graphing Tool")
+    show_pygwalker(filtered_df)
+    
+elif filtered_df is not None and filtered_df.empty:
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.write("") 
+    st.markdown("### Dataset")
+    st.write("no data returned for selected filters")

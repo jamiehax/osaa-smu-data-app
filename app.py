@@ -48,8 +48,14 @@ if not check_password():
 # create test database
 db_path = setup_db()
 
+# create session states
 if 'db_path' not in st.session_state:
     st.session_state.db_path = db_path
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = {}
+if 'formatted_chat_history' not in st.session_state:
+    st.session_state.formatted_chat_history = {}
+
 
 # create app pages
 home_page = st.Page("home.py", title="Home", icon=":material/home:")
