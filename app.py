@@ -13,7 +13,7 @@ def check_password():
         Checks whether a password entered by the user is correct.
         """
 
-        if hmac.compare_digest(st.session_state["app_password"], os.getenv("app_password")):
+        if hmac.compare_digest(st.session_state["app_password"], st.secrets["app_password"]):
             st.session_state["app_password_correct"] = True
             del st.session_state["app_password"]  # remove the password
         else:

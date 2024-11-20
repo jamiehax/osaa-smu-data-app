@@ -154,7 +154,7 @@ def make_vectorstore():
     # create embedding model
     embedding_model = AzureOpenAIEmbeddings(
         model="smudataembed",
-        api_key=os.getenv('azure'),
+        api_key=st.secrets['azure'],
         azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     )
 
@@ -208,7 +208,7 @@ def add_docs(vectorstore):
 def get_retriever(db_path):
     embedding_model = AzureOpenAIEmbeddings(
         model="smudataembed",
-        api_key=os.getenv('azure'),
+        api_key=st.secrets['azure'],
         azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     )
 

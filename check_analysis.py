@@ -8,7 +8,7 @@ from langchain_core.runnables import RunnablePassthrough
 
 
 # os.environ["LANGCHAIN_TRACING_V2"] = "true"
-# os.environ["LANGCHAIN_API_KEY"] = os.getenv('langsmith')
+# os.environ["LANGCHAIN_API_KEY"] = st.secrets['langsmith']
 # os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 # os.environ["LANGCHAIN_PROJECT"] = "osaa-smu-contradictory-analysis"
 
@@ -72,7 +72,7 @@ st.write("")
 
 llm = AzureChatOpenAI(
     azure_deployment="osaagpt32k",
-    api_key=os.getenv('azure'),
+    api_key=st.secrets['azure'],
     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     openai_api_version="2024-05-01-preview"
 )
