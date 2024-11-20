@@ -6,6 +6,7 @@ from pypdf import PdfReader
 from docx import Document
 import textract
 import hmac
+import os
 
 
 # check password
@@ -19,7 +20,7 @@ def check_password():
         Checks whether a password entered by the user is correct.
         """
 
-        if hmac.compare_digest(st.session_state["pid_password"], st.secrets["pid_password"]):
+        if hmac.compare_digest(st.session_state["pid_password"], os.getenv("pid_password")):
             st.session_state["pid_password_correct"] = True
             del st.session_state["pid_password"]  # remove the password
         else:
@@ -336,7 +337,7 @@ st.write("")
 # initiatlize model
 llm = AzureChatOpenAI(
     azure_deployment="osaagpt32k",
-    api_key=st.secrets['azure'],
+    api_key=os.getenv('azure'),
     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     openai_api_version="2024-05-01-preview"
 )

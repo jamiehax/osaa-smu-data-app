@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
+import os
 from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker
 
 
@@ -79,8 +80,8 @@ if st.button("get data", type="primary", use_container_width=True):
 
     # construct API request URL
 
-    api_key = st.secrets['acled_key']
-    email = st.secrets['acled_email']
+    api_key = os.getenv('acled_key')
+    email = os.getenv('acled_email')
 
     BASE_URL = f"https://api.acleddata.com/acled/read?key={api_key}&email={email}"
 
