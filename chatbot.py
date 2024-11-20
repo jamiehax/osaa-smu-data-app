@@ -9,6 +9,7 @@ from langchain_core.runnables import RunnablePassthrough
 import tiktoken
 from langchain_core.messages import BaseMessage, ToolMessage
 from typing import List
+import os
 
 # create session states
 if 'chat_history' not in st.session_state:
@@ -100,7 +101,7 @@ st.write("")
 # llm model
 model = AzureChatOpenAI(
     azure_deployment="osaagpt32k",
-    api_key=st.secrets['azure'],
+    api_key=os.getenv('azure'),
     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
     openai_api_version="2024-05-01-preview"
 )
