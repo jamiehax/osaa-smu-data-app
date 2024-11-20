@@ -131,8 +131,7 @@ def llm_data_analysis(df, chat_session_id):
         
         if session_id in st.session_state.chat_history:
             st.session_state.chat_history[session_id].clear()
-        if session_id in st.session_state.formatted_chat_history:
-            st.session_state.formatted_chat_history[session_id].clear()
+        st.session_state.formatted_chat_history = {}
 
     def display_chat_history(session_id: str) -> None:
         """
