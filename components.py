@@ -210,7 +210,7 @@ def llm_data_analysis(df, chat_session_id):
 
     model = AzureChatOpenAI(
         azure_deployment="osaagpt32k",
-        api_key=os.gentenv('azure'),
+        api_key=os.getenv('azure'),
         azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
         openai_api_version="2024-05-01-preview"
     )
