@@ -93,14 +93,17 @@ if st.button("get data", type="primary", use_container_width=True):
 
     # API query parameters
     data = get_data(data_url)
+    st.write(data)
 
     if isinstance(data, Exception):
-        st.error(data)
+        st.error(f'Error getting data {data}')
+        df = None
     else:
         try:
             df = pd.DataFrame(data['data'])
         except Exception as e:
-            st.error(e)
+            st.error(f'Erorr processing data: {e}')
+            df = None
 else:
     df = None
 
