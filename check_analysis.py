@@ -71,10 +71,10 @@ st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
 llm = AzureChatOpenAI(
-    azure_deployment="gpt4o",
+    azure_deployment="osaagpt32k",
     api_key=os.getenv('azure'),
     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-    openai_api_version="2024-05-13"
+    openai_api_version="2024-05-01-preview"
 )
 
 # document retriever
