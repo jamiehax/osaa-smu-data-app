@@ -93,7 +93,6 @@ if st.button("get data", type="primary", use_container_width=True):
 
     # API query parameters
     data = get_data(data_url)
-    st.write(data)
 
     if isinstance(data, Exception):
         st.error(f'Error getting data {data}')
