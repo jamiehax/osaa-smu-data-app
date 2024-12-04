@@ -148,11 +148,12 @@ with col2:
         for page_num in range(1, max_pages + 1):
             data = get_data(f'{data_url}&page={page_num}')
 
-            # break if no data
-            if not data.get('data', []):
-                break
-
             if not isinstance(data, Exception):
+                
+                # break if no data
+                if not data.get('data', []):
+                    break
+
                 if len(data['data']) < 1:
                     st.write("no data returned for the selected countries, indicators, and years.")
                 else:
