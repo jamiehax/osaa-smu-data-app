@@ -61,6 +61,6 @@ chatbot_page = st.Page("chatbot.py", title="OSAA General Chatbot", icon=":materi
 contradictory_analysis_page = st.Page("check_analysis.py", title="Contradictory Analysis Tool", icon=":material/check:")
 pid_checker_page = st.Page("pid_checker.py", title="PID Checker", icon=":material/task_alt:")
 
-pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, acled_dashboard_page, chatbot_page, contradictory_analysis_page, pid_checker_page])
+pg = st.navigation([home_page, dashboard_page, wb_dashboard_page, sdg_dashboard_page, acled_dashboard_page, chatbot_page, contradictory_analysis_page, pid_checker_page], position='hidden')
 st.set_page_config(page_title="SMU Data App", page_icon=":material/home:", layout="wide")
 pg.run()
