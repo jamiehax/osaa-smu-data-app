@@ -29,6 +29,9 @@ def check_password():
     # return True if the password is validated.
     if st.session_state.get("pid_password_correct", False):
         return True
+    
+    # home button
+    st.page_link("home.py", label="Home", icon=":material/home:", use_container_width=True)
 
     st.markdown("#### PID Page Password")
 
@@ -325,6 +328,8 @@ def get_strategic_guidance(cluster):
         
     return strategic_guidances.get(cluster, "No strategic guidance available for this cluster.")
 
+# home button
+st.page_link("home.py", label="Home", icon=":material/home:", use_container_width=True)
 
 # title and introduction
 st.title("OSAA SMU's Check PID Tool")

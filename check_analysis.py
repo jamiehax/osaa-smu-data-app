@@ -40,9 +40,6 @@ def display_chat_history(session_id: str) -> None:
     messages = st.session_state.formatted_chat_history.get(session_id, None)
     if messages is None:
         st.session_state.formatted_chat_history[session_id] = []
-        intro_message = "Hi! I am an LLM chatbot assistant with access to OSAA publications. I can answer whether provided analysis contradicts any analysis present in these publications."
-        st.chat_message("assistant").markdown(intro_message)
-        st.session_state.formatted_chat_history[session_id].append({"role": "assistant", "content": intro_message})
     else:   
         for message in messages:
             st.chat_message(message["role"]).markdown(message["content"])
@@ -63,12 +60,16 @@ def format_docs(docs):
     
     return "\n\n".join(formatted_contexts)
 
+# home button
+st.page_link("home.py", label="Home", icon=":material/home:", use_container_width=True)
+
 # title and introduction
 st.title("OSAA SMU's Contradictory Analysis Tool")
-st.markdown("The Contradictory Analysis Tool allows you to check if your analysis contradicts any previous analysis in OSAA's publications. This tool uses large language models with retrieval augmented generation and therefore may provide wrong answers.")
+st.markdown("The Contradictory Analysis Tool allows you to check if your analysis contradicts previous analysis in OSAA's publications.")
+st.markdown("**NOTE:** This tool uses large language models with retrieval augmented generation and therefore may provide wrong answers. It is important to alway double check for yourself.")
+st.info("This tool is currently only able to check for contradictions in the 2023 and 2024 NEPAD reports. Stay tuned for when all reports become available.", icon=":material/warning:")
 
-st.markdown("<hr>", unsafe_allow_html=True)
-st.write("")
+
 
 llm = AzureChatOpenAI(
     azure_deployment="osaagpt32k",
