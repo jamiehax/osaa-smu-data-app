@@ -6,6 +6,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.image("content/OSAA-Data-logo.svg")
 
+st.warning("This app is **in development**. It is only to be used by authorized members of OSAA.", icon=":material/warning:")
 
 # st.title("SMU's Data App")
 st.markdown("Welcome to the Office of the Speical Advisor to Africa's Strategic Management Unit's Data App. The app provides a centralized tool for exploring and analyzing data from multiple sources. Use the sidebar to the left or the page links below to navigate between the data products.")

@@ -26,6 +26,8 @@ def check_password():
     # show input for password.
     st.image("content/OSAA-Data-logo.svg")
 
+    st.warning("This app is **in development**. It is only to be used by authorized members of OSAA.", icon=":material/warning:")
+
     st.markdown("Welcome to the Office of the Speical Advisor to Africa's Strategic Management Unit's Data App. Please enter the app password to access the data app.")
 
     st.text_input(
