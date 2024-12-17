@@ -8,11 +8,18 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, trim
 from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from operator import itemgetter
 from langchain_core.runnables import RunnablePassthrough
 import tiktoken
 from langchain_core.messages import BaseMessage, ToolMessage
 from typing import List
+import numpy as np
+
+# graph maker inports
+import re
+import plotly.express as px
+import plotly.graph_objects as go
 
 # mitosheet imports
 from mitosheet.streamlit.v1 import spreadsheet
@@ -108,200 +115,274 @@ def df_summary(df):
 
 
 
-
 @st.fragment
-def llm_data_analysis(df, chat_session_id):
+def llm_data_analysis(df, chat_session_id, chat_history):
     """
-    Display a natural language data anylsis chatbot for the passed dataframe. The message history is specific to the passed chat_session_id.
+    Display a natural language data anylsis chatbot for the passed dataframe. The message history is specific to the passed chat_session_id. If a local dict object is passed as chat_history, then the chat history will not persist across script reruns. To persist chat history across reruns, pass a reference to a dict stored in st.session_state or use the StreamlitChatMessageHistory class from LangChain (easiest). Chats are not persisted because if a user changes the data, the chat history from the old data could lead to unexpected responses on the new data.
     """
 
-    def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    st.subheader("Data Analysis Tool")
+    st.write("Use this tool to preform data analysis on your selected data using natural language. Describe the analysis you want to do or the question you want to answer, and the tool will preform the necesary analysis and return the result.")
+    st.markdown("**NOTE:** This tool uses large language models to preform the analysis. It can and will make mistakes. Therefore, use this tool for **exploratory data analysis only**. If you plan to incldue analysis from this tool in a written publication, it must be double checked and reviewd by a human.")
+
+    def summarize_dataframe(df: pd.DataFrame) -> str:
         """
-        Return the chat history for the passed session id.
+        Generate a descriptive summary of a DataFrame to pass to the LLM.
         """
 
-        if session_id not in st.session_state.chat_history:
-            st.session_state.chat_history[session_id] = InMemoryChatMessageHistory()
-        return st.session_state.chat_history[session_id]
-
-    def clear_chat_history(session_id: str) -> None:
-        """
-        Clear the chat history for the passed session id.
-        """
+        # column names and types
+        column_info = "\n".join(
+            [f"- {col}: {dtype}" for col, dtype in zip(df.columns, df.dtypes)]
+        )
         
-        if session_id in st.session_state.chat_history:
-            st.session_state.chat_history[session_id].clear()
-        st.session_state.formatted_chat_history = {}
-
-    def display_chat_history(session_id: str) -> None:
-        """
-        Display the chat history in a formatted way.
-        """
-
-        if st.session_state.formatted_chat_history.get(session_id, None) is None:
-            st.session_state.formatted_chat_history[session_id] = []
-
-        messages = st.session_state.formatted_chat_history.get(session_id, None)
-        if messages is not None:
-            for message in messages:
-                st.chat_message(message["role"]).markdown(message["content"])
-
-    def str_token_counter(text: str) -> int:
-        """
-        Return the number of tokens to encode the passed text.
-        """
+        # first 5 rows
+        first_five_rows = df.head(5).to_string(index=False)
         
-        enc = tiktoken.get_encoding("o200k_base")
-        return len(enc.encode(text))
+        # description
+        description = f"""
+            This dataset contains {df.shape[0]} rows and {df.shape[1]} columns. 
+            Here are the column names and their data types:
+            {column_info}
 
-    def tiktoken_counter(messages: List[BaseMessage]) -> int:
+            Here are the first 5 rows of the data:
+            {first_five_rows}
         """
-        Return the number of tokens for the message history using the tiktoken counter.
+
+        return description.strip()
+
+    def get_message_history(session_id: str) -> BaseChatMessageHistory:
+        if session_id not in chat_history:
+            chat_history[session_id] = InMemoryChatMessageHistory()
+        return chat_history[session_id]
+    
+    def get_output_from_code(code, df):
         """
-        
-        num_tokens = 3 
-        tokens_per_message = 3
-        tokens_per_name = 1
-        for msg in messages:
-            if isinstance(msg, HumanMessage):
-                role = "user"
-            elif isinstance(msg, AIMessage):
-                role = "assistant"
-            elif isinstance(msg, ToolMessage):
-                role = "tool"
-            elif isinstance(msg, SystemMessage):
-                role = "system"
-            else:
-                raise ValueError(f"Unsupported messages type {msg.__class__}")
-            num_tokens += (
-                tokens_per_message
-                + str_token_counter(role)
-                + str_token_counter(msg.content)
-            )
-            if msg.name:
-                num_tokens += tokens_per_name + str_token_counter(msg.name)
-        return num_tokens
-
-    def summarize_dataframe(df: pd.DataFrame, max_rows=5, max_categories=25) -> str:
+        Extract the output variable from the generated code.
         """
-        Return a string combining a summary and preview of the dataframe. 
-        """
-        
-        summary = df.describe().to_string()
-        preview = df.head(max_rows).to_string()
 
-        categorical_counts = []
-        non_numeric_columns = df.select_dtypes(exclude='number').columns
-        for col in non_numeric_columns:
-            counts = df[col].value_counts().nlargest(max_categories).to_string()
-            categorical_counts.append(f"Column '{col}' top {max_categories} categories: {counts}")
-
-        categorical_unique = []
-        non_numeric_columns = df.select_dtypes(exclude='number').columns
-        for col in non_numeric_columns:
-            num_unique = df[col].nunique()
-            num_missing = df[col].isna().sum()
-            categorical_unique.append(f"Column '{col}': {num_unique} unique values and {num_missing} missing values")
-
-        return f"DataFrame Preview (first {max_rows} rows):\n{preview}\n\nDataFrame Numeric Column Summary:\n{summary}\n\nDataFrame non-numeric Column Top Category Counts: {','.join(categorical_counts)}\n\nDataFrame non-numeric Column Unique Values: {','.join(categorical_unique)}"
-
-
-
-    model = AzureChatOpenAI(
-        azure_deployment="osaagpt32k",
-        api_key=os.getenv('azure'),
-        azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
-        openai_api_version="2024-05-01-preview"
-    )
-
-    trimmer = trim_messages(
-        max_tokens=1000,
-        strategy="last",
-        token_counter=tiktoken_counter,
-        include_system=True,
-        allow_partial=False,
-        start_on="human",
-    )
+        try:
+            local_variables = {'df': df, 'pd': pd, 'np': np}
+            exec(code, {}, local_variables)
+            return local_variables['output']
+        except Exception as e:
+            return e
 
     prompt = ChatPromptTemplate.from_messages(
         [
             (
                 "system",
-                "You are a helpful data analyst assistant. Answer the user's question about their data.",
+                "You are an expert data analyst. Answer the user's question about their data. You will receive a summary of the dataset. "
+                "If the user's question requires code to answer, include the code to answer their question as a single chunk of Python code in your response."
+                "When writing code to answer the question, use the Pandas library. Do not create visualizations as part of your analysis. "
+                "Assume that the data is stored as a Pandas DataFrame in the variable 'df'."
+                "Write your code so that the answer to the user's question is stored in a variable called 'output'. "
+                "Ensure the 'output' variable contains a concise and accurate representation of the results that directly answer the user's question."
+                "If the question requires returning multiple values, 'output' should be a Pandas DataFrame or Series containing the multiple values."
+                "Write efficient and readable code, avoiding unnecessary computations or operations."
+                "If necessary, handle missing or unexpected data in a way that ensures the analysis remains accurate."
+                "Always include an explanation of what the variable 'output' represents in the context of the user's question, along with a clear explanation of the logic behind your code."
             ),
             MessagesPlaceholder(variable_name="messages"),
             (
-                "human",
-                "Here is the Pandas DataFrame: {dataframe}."
-            ),
-            (
-                "human",
-                "My question is: {prompt}."
+                "system",
+                "DATASET SUMMARY: {data_summary}."
             )
         ]
     )   
 
-    # first trim the message history, then format with the prompt, then send to the model
-    chain = (
-        RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer) 
-        | prompt 
-        | model
+    # llm = AzureChatOpenAI(
+    #     azure_deployment="osaagpt32k",
+    #     api_key=os.getenv('azure'),
+    #     azure_endpoint="https://openai-osaa-v2.openai.azure.com/",
+    #     openai_api_version="2024-05-01-preview"
+    # )
+    llm = AzureChatOpenAI(
+        azure_deployment="gpt4o",
+        api_key=os.getenv('azure'),
+        azure_endpoint="https://openai-osaa-v2.openai.azure.com/openai/deployments/gpt4o/chat/completions?api-version=2024-08-01-preview",
+        openai_api_version="2024-08-01-preview"
     )
-    config = {"configurable": {"session_id": chat_session_id}}
 
-    # display the formatted message history
+    chain = prompt | llm
+
     messages_container = st.container()
     with messages_container:
-        display_chat_history(chat_session_id)
+        messages = chat_history.get(chat_session_id, None)
+        if messages:
+            for msg in messages.messages:
+                st.chat_message(msg.type).write(msg.content)
+
+    if analysis_question := st.chat_input('ask about the data...'):
+
+        with messages_container:
+            st.chat_message("human").write(analysis_question)
+
+        chain_with_history = RunnableWithMessageHistory(
+            chain,
+            get_message_history,
+             input_messages_key="messages"
+        )
+        config = {"configurable": {"session_id": chat_session_id}}
+        
+        response = chain_with_history.invoke(
+            {
+                "messages": [HumanMessage(content=analysis_question)],
+                "data_summary": summarize_dataframe(df),
+            },
+            config=config,
+        )
+
+        code_block_match = re.search(r'```(?:[Pp]ython)?(.*?)```', response.content, re.DOTALL)
+        if code_block_match:
+            code_block = code_block_match.group(1).strip()
+            cleaned_code = re.sub(r'(?m)^\s*fig\.show\(\)\s*$', '', code_block)
+
+            # # check generated code
+            # unsafe_keywords = ["os", "subprocess", "eval", "exec", "open"]
+            # if any(keyword in cleaned_code for keyword in unsafe_keywords):
+            #     st.error("Unsafe generated code detected:")
+            #     output = None
+            # else:
+            #     output = get_output_from_code(cleaned_code, df)
+
+            output = get_output_from_code(cleaned_code, df)
+        else:
+            output = None
+
+        with messages_container:
+            with st.chat_message("ai"):
+                st.write(response.content)
+                if output is not None:
+                    if isinstance(output, (pd.Series, pd.DataFrame, np.ndarray)):
+                        st.markdown('###### Calculated Output:')
+                        st.dataframe(output)
+                    elif isinstance(output, dict):
+                        st.markdown('###### Calculated Output:')
+                        for key, value in output.items():
+                            st.markdown(f'**{key}**: {value}')
+                    elif isinstance(output, Exception):
+                        st.write(f"I'm sorry I could not answer your question an error occured. \n\n {output}")
+                    else:   
+                        st.markdown(f'**Calcuated Output:** {output}')
+                else:
+                    st.markdown('###### Calculated Output:')
+                    st.write('there was no code to run in the generated response.')
 
 
-    with st.container():
-        if prompt := st.chat_input("ask about the data..."):
 
-            st.session_state.formatted_chat_history[chat_session_id].append({"role": "user", "content": prompt})
+@st.fragment
+def llm_graph_maker(df):
 
-            messages_container.chat_message("user").markdown(prompt)
+    st.subheader("Visualization Tool")
+    st.write("Use this tool to create visualizations from descriptions. Write a description of the visulization you would like, including the type of graph and what part of the data you want to show. The tool will attempt to create a graph based on your description. It may ask for more information or instructions if needed.")
+    st.markdown("**NOTE:** This tool uses large language models to create the graph. It can and will make mistakes. Therefore, use this tool for **exploratory data analysis only**. If you plan to incldue analysis from this tool in a written publication, it must be double checked and reviewd by a human.")
 
-            if df is not None:
-                # df_string = summarize_dataframe(filtered_df)
-                df_string = df.to_string()
+    def summarize_dataframe(df: pd.DataFrame) -> str:
+        """
+        Generate a descriptive summary of a DataFrame to pass to the LLM.
+        """
+
+        # column names and types
+        column_info = "\n".join(
+            [f"- {col}: {dtype}" for col, dtype in zip(df.columns, df.dtypes)]
+        )
+        
+        # first 5 rows
+        first_five_rows = df.head(5).to_string(index=False)
+        
+        # description
+        description = f"""
+            This dataset contains {df.shape[0]} rows and {df.shape[1]} columns. 
+            Here are the column names and their data types:
+            {column_info}
+
+            Here are the first 5 rows of the data:
+            {first_five_rows}
+        """
+
+        return description.strip()
+    
+    def get_fig_from_code(code, df):
+        """
+        Extract the plotly fig object from the generated code.
+        """
+        try:
+            local_variables = {'df': df, 'pd': pd, 'np': np, 'go': go}
+            exec(code, {}, local_variables)
+            return local_variables['fig']
+        except Exception as e:
+            st.error(f'error executing code to generate graph: {e}. Attempted to run: ')
+            st.code(code)
+
+    # initiatlize model
+    llm = AzureChatOpenAI(
+        azure_deployment="gpt4o",
+        api_key=os.getenv('azure'),
+        azure_endpoint="https://openai-osaa-v2.openai.azure.com/openai/deployments/gpt4o/chat/completions?api-version=2024-08-01-preview",
+        openai_api_version="2024-08-01-preview"
+    )
+
+    # chat prompt
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are a data visualization expert. Follow the user's instructions to create a graph. You will get a summary of the data as well as the first several rows. The data is available as a Pandas DataFrame in the variable 'df'. Use only the following Python libraries: Plotly, Pandas, and NumPy. Store the graph in a variable called 'fig'.",
+            ),
+            (
+                "system",
+                "Ensure that the graph type and relevant details (e.g., axes, colors) match the user's instructions. "
+                "Handle missing or non-numeric data gracefully by filling, dropping, or converting as necessary. "
+                "Ensure the output is valid Python code that can run without modifications."
+            ),
+            (
+                "system",
+                "DATASET SUMMARY: {data_summary}",
+            ),
+            MessagesPlaceholder(variable_name="messages")
+        ]
+    )
+
+    # make chain
+    chain = prompt | llm 
+
+    # get input
+    if graph_prompt := st.chat_input("describe the visualization you want to create..."):
+
+        st.info(f"Instructions: {graph_prompt}")
+
+        inputs = {
+            "data_summary": summarize_dataframe(df), 
+            "messages": [HumanMessage(content=graph_prompt)]
+        }
+
+        # get response
+        with st.spinner("generating graph"):
+            response = chain.invoke(inputs)
+            code_block_match = re.search(r'```(?:[Pp]ython)?(.*?)```', response.content, re.DOTALL)
+            if code_block_match:
+                code_block = code_block_match.group(1).strip()
+                cleaned_code = re.sub(r'(?m)^\s*fig\.show\(\)\s*$', '', code_block)
+
+                # # check generated code
+                # unsafe_keywords = ["os", "subprocess", "eval", "exec", "open"]
+                # if any(keyword in cleaned_code for keyword in unsafe_keywords):
+                #     st.error("Unsafe generated code detected:")
+                #     st.code(cleaned_code)
+                # else:
+                #     fig = get_fig_from_code(cleaned_code, df)
+
+                fig = get_fig_from_code(cleaned_code, df)
             else:
-                df_string = "There is no DataFrame available."
+                st.write(f"No code generated in the LLM response. This could mean the LLM wants more instructions to make the graph. Please note that this tool will not remember your last message, so please enter your entire visualization instructions. See it's response below:")
+                st.chat_message("assistant").markdown(response.content)
+                fig = None
 
-            # num_tokens = tiktoken_counter([HumanMessage(content=df_string)])
-            # st.write(f"number tokens for used for dataset: {num_tokens}")
+        if fig is not None:
+            st.plotly_chart(fig, use_container_width=True)
 
-            # get reponse
-            with_message_history = RunnableWithMessageHistory(
-                chain,
-                get_session_history,
-                input_messages_key="messages",
-            )
-            response_generator = with_message_history.stream(
-                {
-                    "messages": [HumanMessage(content=prompt)],
-                    "dataframe": df_string,
-                    "prompt": prompt
-                },
-                config=config
-            )
-            
-            with messages_container:
-                with st.chat_message("assistant"):
-                    try:
-                        response = st.write_stream(response_generator)
-                    except Exception as e:
-                        response = f"I'm sorry I could not answer your question an error occured. \n\n {e}"
-                        st.write(response)
-
-            st.session_state.formatted_chat_history[chat_session_id].append({"role": "assistant", "content": response})
-
-
-        if st.button("clear chat history", type="primary", use_container_width=True):
-            clear_chat_history(chat_session_id)
-
-            with messages_container:
-                display_chat_history(chat_session_id)
+            st.markdown("##### Code Used")
+            st.code(cleaned_code)
 
 
 
