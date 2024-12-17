@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import requests
-from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker
+from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker, llm_graph_maker
 
 
 @st.cache_data
@@ -34,10 +34,13 @@ BASE_URL = "https://unstats.un.org/sdgs/UNSDGAPIV5"
 # read in iso3 code reference df
 iso3_reference_df = get_iso_reference_df()
 
+# home button
+st.page_link("home.py", label="Home", icon=":material/home:", use_container_width=True)
+
 # title and introduction
 st.title("OSAA SMU's SDG Data Dashboard")
 
-st.markdown("The SDG Dashboard allows for exploratory data analysis of the United Nations Sustainable Development Goals DataBase. Explore the 17 sustainable development goals and their corresponding indicators, and select and download data by indicator, country, and time range. Create automatic interactive time series graphs on the selected data.")
+st.markdown("To get started, request data from UN Sustainable Development Goals database. Use the first section to explore available indicators related to each goal. Then, select the indicators, countries, and time range for the data you are interested in and click 'get data'. Once the data has been loaded, you will have access to the analysis tools.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
@@ -70,7 +73,7 @@ st.write("")
 st.markdown("#### Select Indicators")
 indicators = [f"{indicator['code']}: {indicator['description']}" for indicator in indicator_data]
 if indicator_data is not None:
-    selected_indicator_names = st.multiselect("select indicators", indicators, label_visibility="collapsed")
+    selected_indicator_names = st.multiselect("select indicators", indicators, label_visibility="collapsed", placeholder='select indicators...')
     selected_indicator_codes = [entry.split(': ')[0] for entry in selected_indicator_names]
 
 st.markdown("#### Select Countries")
@@ -180,7 +183,7 @@ with col2:
         if not df.empty:
 
             # add country reference codes
-            df = df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='m49', right_on='m49', how='left')
+            df = df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'Intermediate Region Name','iso2', 'iso3', 'm49']], left_on='m49', right_on='m49', how='left')
             # df = df.merge(iso3_reference_df[['Country or Area', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49']], left_on='geoAreaCode', right_on='m49', how='left')
 
             # clean dataframe
@@ -188,7 +191,7 @@ with col2:
             df['Year'] = df['Year'].astype(int)
 
             # reorder columns
-            column_order = ['Indicator', 'Series', 'Year', 'Country or Area', 'Value', 'Region Name', 'Sub-region Name', 'iso2', 'iso3', 'm49', 'Series Description']
+            column_order = ['Indicator', 'Series', 'Year', 'Country or Area', 'Value', 'Region Name', 'Sub-region Name', 'Intermediate Region Name', 'iso2', 'iso3', 'm49', 'Series Description']
             df = df[column_order]
 
     else:
@@ -265,21 +268,24 @@ if df is not None and not df.empty:
     # st.write("") 
 
     # natural language dataset exploration
-    st.subheader("Natural Language Analysis")
-    st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, R, etc.).")
-    llm_data_analysis(df, chat_session_id)
+    llm_data_analysis(df, chat_session_id, {})
     st.markdown("<hr>", unsafe_allow_html=True)
     st.write("") 
 
-    # Mitosheet
-    st.subheader("Mitosheet Spreadsheet")
-    show_mitosheet(df)
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.write("") 
+    # natural language graph maker
+    llm_graph_maker(df)
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("")
 
-    # PyGWalker
-    st.subheader("PyGWalker Graphing Tool")
-    show_pygwalker(df)
+    # # Mitosheet
+    # st.subheader("Mitosheet Spreadsheet")
+    # show_mitosheet(df)
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("") 
+
+    # # PyGWalker
+    # st.subheader("PyGWalker Graphing Tool")
+    # show_pygwalker(df)
 
 elif df is not None and df.empty:
     st.markdown("<hr>", unsafe_allow_html=True)

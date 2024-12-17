@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import wbgapi as wb
 import plotly.express as px
-from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker
-
+from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker, llm_graph_maker
 
 # cached functions for retreiving data
 @st.cache_data
@@ -144,11 +143,13 @@ def show_time_series_plots():
 # page chat id
 chat_session_id = 'wb-dashboard-chat-id'
 
+# home button
+st.page_link("home.py", label="Home", icon=":material/home:", use_container_width=True)
 
 # title and introduction
 st.title("OSAA SMU's World Bank Data Dashboard")
 
-st.markdown("The WorldBank Data Dashboard allows for exploratory data analysis of the World Bank's Data. First, select one of the WorldBank's databases to use. Then select the indicators, countries, and time range to get data for. Indicators can be filtered with keywords. For example, if you are using the *Doing Business* database and interested in indicators related to construction, enter *construction* into the search box to limit the indicators to only those that mention construction.")
+st.markdown("To get started, first request data from the WorldBank. To do this, first select the database you would like to access data from. Then select the indicators, countries, and time range to get data for. Indicators can be filtered with keywords. For example, if you are using the *Doing Business* database and interested in indicators related to construction, enter *construction* into the select indicator box to limit the indicators to only those that mention construction. Click 'Get Data' to request the selected data. Once the data has been loaded, you will have access to the data analysis tools.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
@@ -272,10 +273,10 @@ if df is not None and not df.empty:
     st.write("")
 
     # show time series graphs
-    st.subheader("Explore Data")
-    show_time_series_plots()
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.write("")
+    # st.subheader("Explore Data")
+    # show_time_series_plots()
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("")
 
     # show summary statistics
     # st.markdown("### Variable Summary")
@@ -284,21 +285,24 @@ if df is not None and not df.empty:
     # st.write("") 
 
     # natural language dataset exploration
-    st.subheader("Natural Language Analysis")
-    st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, R, etc.).")
-    llm_data_analysis(df, chat_session_id)
+    llm_data_analysis(df, chat_session_id, {})
     st.markdown("<hr>", unsafe_allow_html=True)
     st.write("") 
 
-    # Mitosheet
-    st.subheader("Mitosheet Spreadsheet")
-    show_mitosheet(df)
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.write("") 
+    # natural language graph maker
+    llm_graph_maker(df)
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("") 
 
-    # PyGWalker
-    st.subheader("PyGWalker Graphing Tool")
-    show_pygwalker(df)
+    # # Mitosheet
+    # st.subheader("Mitosheet Spreadsheet")
+    # show_mitosheet(df)
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("") 
+
+    # # PyGWalker
+    # st.subheader("PyGWalker Graphing Tool")
+    # show_pygwalker(df)
 
 elif df is not None and df.empty:
     st.markdown("<hr>", unsafe_allow_html=True)

@@ -1,14 +1,17 @@
 import streamlit as st
 import pandas as pd
-from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker
+from components import df_summary, llm_data_analysis, show_mitosheet, show_pygwalker, llm_graph_maker
 
 
 # page chat id
 chat_session_id = 'data-dashboard-chat-id'
 
+# home button
+st.page_link("home.py", label="Home", icon=":material/home:", use_container_width=True)
+
 # title and introduction
 st.title("OSAA SMU's Data Dashboard")
-st.markdown("The Data Dashboard allows for exploratory data analysis on a dataset through quick access to summary statistics and natural language conversations with an AI chatbot that has the ability to understand the dataset. First select a dataset to view by searching the available datasets by name or uploading your own. Once you have selected a dataset, you can filter and subset the dataset to only focus on the area(s) of interest. Once you have selected and filtered a dataset, you can view the summary statistics on that data. To generate and download a more detailed summary, go to the *Dataset Profile Report* section once you have selected and filtered the dataset. Use the *Natural Language Queries* section to understand the data by asking natural language questions to a chatbot that understands the data.")
+st.markdown("To get started, upload data you have stored in a CSV or Excel file. Once you have uploaded your data, you will have the ability to further filter it if desired. Once you have optionally filtered the data, you will be able to use the data analysis tools.")
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
 
@@ -93,34 +96,34 @@ if filtered_df is not None and not filtered_df.empty:
     # display the dataset
     st.markdown("### Dataset")
     st.write(filtered_df)
-
     st.markdown("<hr>", unsafe_allow_html=True)
     st.write("")
 
-    # show summary statistics
-    st.markdown("### Variable Summary")
-    df_summary(filtered_df)
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.write("") 
+    # # show summary statistics
+    # st.markdown("### Variable Summary")
+    # df_summary(filtered_df)
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("") 
 
     # natural language dataset exploration
-    st.subheader("Natural Language Analysis")
-    st.write("Use this chat bot to understand the data with natural language questions. Ask questions about the data and the chat bot will provide answers in natural language, as well as code (Python, R, etc.).")
-    llm_data_analysis(filtered_df, chat_session_id)
-
+    llm_data_analysis(df, chat_session_id, {})
     st.markdown("<hr>", unsafe_allow_html=True)
     st.write("") 
 
-    # Mitosheet
-    st.subheader("Mitosheet Spreadsheet")
-    show_mitosheet(filtered_df)
+    # natural language graph maker
+    llm_graph_maker(df)
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("")
 
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.write("") 
+    # # Mitosheet
+    # st.subheader("Mitosheet Spreadsheet")
+    # show_mitosheet(filtered_df)
+    # st.markdown("<hr>", unsafe_allow_html=True)
+    # st.write("") 
 
-    # PyGWalker
-    st.subheader("PyGWalker Graphing Tool")
-    show_pygwalker(filtered_df)
+    # # PyGWalker
+    # st.subheader("PyGWalker Graphing Tool")
+    # show_pygwalker(filtered_df)
     
 elif filtered_df is not None and filtered_df.empty:
     st.markdown("<hr>", unsafe_allow_html=True)
