@@ -18,7 +18,7 @@ st.write("")
 
 # find and choose a dataset
 st.subheader("Upload and Filter a Dataset")
-uploaded_df = st.file_uploader("Choose a file", type=["csv", "xlsx"], label_visibility="collapsed")
+uploaded_df = st.file_uploader("Choose a file", type=["csv", "xlsx", "parquet"], label_visibility="collapsed")
 
 if uploaded_df is not None:
     df_name = uploaded_df.name
@@ -26,15 +26,19 @@ if uploaded_df is not None:
         df = pd.read_csv(uploaded_df)
     elif uploaded_df.name.endswith('.xlsx'):
         df = pd.read_csv(uploaded_df)
+    elif uploaded_df.name.endswith('.parquet'):
+        df = pd.read_parquet(uploaded_df)
 else:
     df = None
 
 # filter the dataset
 if df is not None:
-    with st.container(height=500):
+    st.markdown("#### Filter Uploaded Data")
+    st.markdown("Click on _**Show Filters**_ below to reveal the data filters. Use these filters to select the subset of data you would like by removing entire columns or values within columns you do not want.")
+    with st.expander("Show Filters"):
         st.markdown("##### Column Filters")
         
-        selected_columns = st.multiselect('select columns to filter:', df.columns.tolist(), df.columns.tolist())
+        selected_columns = st.multiselect('Select columns to filter:', df.columns.tolist(), df.columns.tolist())
         
         filtered_df = df.copy()
         
