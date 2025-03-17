@@ -273,10 +273,10 @@ if df is not None and not df.empty:
     st.write("")
 
     # show time series graphs
-    # st.subheader("Explore Data")
-    # show_time_series_plots()
-    # st.markdown("<hr>", unsafe_allow_html=True)
-    # st.write("")
+    st.subheader("Explore Data")
+    show_time_series_plots()
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.write("")
 
     # show summary statistics
     # st.markdown("### Variable Summary")
