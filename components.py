@@ -29,6 +29,52 @@ from pygwalker.api.streamlit import init_streamlit_comm, get_streamlit_html
 import streamlit.components.v1 as components
 
 import os
+import builtins
+
+# Allowed builtins for executing LLM generated code
+SAFE_BUILTINS = {
+    "abs": builtins.abs,
+    "min": builtins.min,
+    "max": builtins.max,
+    "sum": builtins.sum,
+    "len": builtins.len,
+    "range": builtins.range,
+    "list": builtins.list,
+    "dict": builtins.dict,
+    "set": builtins.set,
+    "float": builtins.float,
+    "int": builtins.int,
+    "str": builtins.str,
+    "print": builtins.print,
+    "enumerate": builtins.enumerate,
+    "zip": builtins.zip,
+}
+
+UNSAFE_KEYWORDS = [
+    "import os",
+    "import subprocess",
+    "import sys",
+    "import importlib",
+    "os.",
+    "subprocess.",
+    "sys.",
+    "importlib.",
+    "open(",
+    "eval(",
+    "exec(",
+    "__",
+    "shutil",
+    "pathlib",
+]
+
+
+def validate_code(code: str) -> None:
+    """Raise ValueError if code contains unsafe keywords."""
+
+    lowered = code.lower()
+    for keyword in UNSAFE_KEYWORDS:
+        if keyword in lowered:
+            raise ValueError(f"Unsafe keyword detected: {keyword}")
 
 
 
@@ -159,10 +205,11 @@ def llm_data_analysis(df, chat_session_id, chat_history):
         """
         Extract the output variable from the generated code.
         """
-
         try:
+            validate_code(code)
             local_variables = {'df': df, 'pd': pd, 'np': np}
-            exec(code, {}, local_variables)
+            restricted_globals = {"__builtins__": SAFE_BUILTINS}
+            exec(code, restricted_globals, local_variables)
             return local_variables['output']
         except Exception as e:
             return e
@@ -245,7 +292,13 @@ def llm_data_analysis(df, chat_session_id, chat_history):
             # else:
             #     output = get_output_from_code(cleaned_code, df)
 
-            output = get_output_from_code(cleaned_code, df)
+            result = get_output_from_code(cleaned_code, df)
+            if isinstance(result, Exception):
+                st.error(f"Error executing generated code: {result}")
+                st.code(cleaned_code)
+                output = None
+            else:
+                output = result
         else:
             output = None
 
@@ -307,12 +360,13 @@ def llm_graph_maker(df):
         Extract the plotly fig object from the generated code.
         """
         try:
+            validate_code(code)
             local_variables = {'df': df, 'pd': pd, 'np': np, 'go': go}
-            exec(code, {}, local_variables)
+            restricted_globals = {"__builtins__": SAFE_BUILTINS}
+            exec(code, restricted_globals, local_variables)
             return local_variables['fig']
         except Exception as e:
-            st.error(f'error executing code to generate graph: {e}. Attempted to run: ')
-            st.code(code)
+            return e
 
     # initiatlize model
     llm = AzureChatOpenAI(
@@ -372,7 +426,13 @@ def llm_graph_maker(df):
                 # else:
                 #     fig = get_fig_from_code(cleaned_code, df)
 
-                fig = get_fig_from_code(cleaned_code, df)
+                result = get_fig_from_code(cleaned_code, df)
+                if isinstance(result, Exception):
+                    st.error(f"Error executing generated code: {result}")
+                    st.code(cleaned_code)
+                    fig = None
+                else:
+                    fig = result
             else:
                 st.write(f"No code generated in the LLM response. This could mean the LLM wants more instructions to make the graph. Please note that this tool will not remember your last message, so please enter your entire visualization instructions. See it's response below:")
                 st.chat_message("assistant").markdown(response.content)
