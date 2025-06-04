@@ -25,7 +25,7 @@ if uploaded_df is not None:
     if uploaded_df.name.endswith('.csv'):
         df = pd.read_csv(uploaded_df)
     elif uploaded_df.name.endswith('.xlsx'):
-        df = pd.read_csv(uploaded_df)
+        df = pd.read_excel(uploaded_df)
     elif uploaded_df.name.endswith('.parquet'):
         df = pd.read_parquet(uploaded_df)
 else:
