@@ -9,7 +9,7 @@ with col1:
 st.warning("This app is **in development**. It is only to be used by authorized members of OSAA.", icon=":material/warning:")
 
 # st.title("SMU's Data App")
-st.markdown("Welcome to the Office of the Speical Advisor to Africa's Strategic Management Unit's Data App. The app provides a centralized tool for exploring and analyzing data from multiple sources. Use the sidebar to the left or the page links below to navigate between the data products.")
+st.markdown("Welcome to the Office of the Special Advisor to Africa's Strategic Management Unit's Data App. The app provides a centralized tool for exploring and analyzing data from multiple sources. Use the sidebar to the left or the page links below to navigate between the data products.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 st.write("")
